@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Робот-программист 🧩</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1a2e, #1a2a4a);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            color: #eee;
+        }
+        .game-container {
+            background: #162238;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+            max-width: 1000px;
+            width: 100%;
+            border: 2px solid #3a6a8a;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .title {
+            font-size: 28px;
+            font-family: 'Courier New', monospace;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241,196,15,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .title .emoji { font-size: 32px; }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a5276;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .qr-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .stats .item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stats .value { color: #f1c40f; }
+        .stats .value.green { color: #2ecc71; }
+        .stats .value.red { color: #e74c3c; }
+
+        .main-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .field-container {
+            flex: 1 1 320px;
+            min-width: 280px;
+            background: #0f1f2a;
+            border-radius: 20px;
+            padding: 10px;
+            border: 2px solid #3a5a6a;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #1a2a3a;
+            border-radius: 12px;
+            touch-action: none;
+        }
+        .code-panel {
+            flex: 1 1 360px;
+            min-width: 280px;
+            background: #0f1f2a;
+            border-radius: 20px;
+            padding: 15px;
+            border: 2px solid #3a5a6a;
+        }
+        .code-panel .subtitle {
+            color: #8ab4d8;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        .code-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.04);
+            padding: 5px 10px;
+            border-radius: 8px;
+            border-left: 4px solid #4a6a8a;
+            transition: 0.2s;
+        }
+        .code-line .line-num {
+            color: #8ab4d8;
+            font-weight: bold;
+            font-family: monospace;
+            width: 30px;
+            font-size: 14px;
+        }
+        .code-line select {
+            flex: 1;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #1a2a3a;
+            color: #eee;
+            border: 2px solid #3a5a6a;
+            font-size: 15px;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            transition: 0.2s;
+        }
+        .code-line select:focus {
+            border-color: #f1c40f;
+        }
+        .code-line select:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .btn {
+            background: #2a3a4a;
+            border: none;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #0a1a2a;
+            transition: 0.08s;
+            touch-action: manipulation;
+            border: 1px solid #4a6a8a;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0a1a2a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #0a1a2a; }
+        .btn.run { background: #27ae60; box-shadow: 0 4px 0 #145a32; border-color: #2ecc71; }
+        .btn.run:hover { background: #2ecc71; }
+        .btn.reset { background: #e67e22; box-shadow: 0 4px 0 #b85a0a; border-color: #f39c12; }
+        .btn.reset:hover { background: #f39c12; }
+        .btn.hint { background: #2980b9; box-shadow: 0 4px 0 #1a5276; border-color: #3498db; }
+        .btn.hint:hover { background: #3498db; }
+
+        .message-area {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 55px;
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 2px dashed #4a6a8a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .win-text {
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241,196,15,0.5);
+            animation: glow 1.5s ease-in-out infinite alternate;
+            font-size: 28px;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .error-text { color: #e74c3c; }
+        .success-text { color: #2ecc71; }
+
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px rgba(241,196,15,0.2); }
+            100% { text-shadow: 0 0 30px rgba(241,196,15,0.8); }
+        }
+
+        .task-hint {
+            font-size: 14px;
+            color: #8ab4d8;
+            text-align: center;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed #4a6a8a;
+        }
+
+        /* QR modal */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content {
+            background: white;
+            padding: 25px 30px 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 400px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            max-height: 92vh;
+            overflow-y: auto;
+        }
+        .qr-modal-content h2 { color: #2d2117; font-size: 20px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 12px; font-size: 13px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box {
+            background: #f5f5f5;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #555;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-family: monospace;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #ddd; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-close-btn {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #c0392b;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .qr-close-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #c0392b; }
+        .qr-close-btn:hover { background: #c0392b; }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #f8f8f8; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 700px) {
+            .title { font-size: 22px; }
+            .game-container { padding: 15px; }
+            .code-line select { font-size: 14px; padding: 4px 8px; }
+            .btn { padding: 8px 16px; font-size: 16px; }
+            .win-text { font-size: 22px; }
+            .stats { font-size: 14px; gap: 10px; }
+        }
+        @media (max-width: 500px) {
+            .field-container { flex: 1 1 100%; }
+            .code-panel { flex: 1 1 100%; }
+            .code-line { padding: 4px 6px; }
+            .code-line .line-num { width: 22px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="header">
+        <div class="title">
+            <span class="emoji">🤖</span> Робот-программист
+        </div>
+        <button class="qr-btn" id="qrBtn">📱 QR-код</button>
+    </div>
+
+    <div class="stats">
+        <span class="item">📦 Собрано: <span class="value green" id="collectedCount">0/3</span></span>
+        <span class="item">📍 Шагов: <span class="value" id="stepCount">0</span></span>
+        <span class="item">🏆 <span class="value" id="statusDisplay">Готов</span></span>
+    </div>
+
+    <div class="main-area">
+        <div class="field-container">
+            <canvas id="fieldCanvas" width="480" height="480"></canvas>
+        </div>
+        <div class="code-panel">
+            <h3>📝 Программа</h3>
+            <div class="subtitle">⬆⬇⬅➡ — найди и исправь 5 ошибок!</div>
+            <div id="codeContainer"></div>
+            <div class="buttons">
+                <button class="btn run" id="runBtn">▶ Запустить</button>
+                <button class="btn reset" id="resetBtn">↺ Сброс</button>
+                <button class="btn hint" id="hintBtn">💡 Подсказка</button>
+            </div>
+            <div class="task-hint" id="taskHint">🎯 Собери 3 звёздочки и дойди до флага! В коде 5 ошибок.</div>
+        </div>
+    </div>
+
+    <div class="message-area" id="messageArea">
+        <span id="messageText">Исправьте ошибки в коде и запустите робота</span>
+    </div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // =================== НАСТРОЙКИ ===================
+    const SIZE = 8;
+    const CELL = 60;
+    const DIRECTIONS = ['⬆', '⬇', '⬅', '➡'];
+    const DX = [0, 0, -1, 1];
+    const DY = [-1, 1, 0, 0];
+
+    // Правильный путь (18 команд)
+    const correctPath = [
+        1, // вниз
+        1, // вниз
+        3, // вправо
+        3, // вправо
+        1, // вниз
+        3, // вправо
+        3, // вправо
+        0, // вверх
+        0, // вверх
+        3, // вправо
+        1, // вниз
+        1, // вниз
+        3, // вправо
+        1, // вниз
+        1, // вниз
+        3, // вправо
+        1, // вниз
+        1  // вниз
+    ];
+
+    // Где ошибки (индексы в correctPath)
+    const errorIndices = [2, 5, 9, 12, 15];
+    // Какие неправильные команды вместо правильных
+    const wrongCommands = [0, 2, 1, 0, 2]; // вверх, влево, вниз, вверх, влево
+
+    // Позиции предметов
+    const ITEMS = [
+        { x: 2, y: 3 },
+        { x: 5, y: 1 },
+        { x: 6, y: 5 }
+    ];
+    const FINISH = { x: 7, y: 7 };
+
+    // =================== СОСТОЯНИЕ ===================
+    let currentCode = correctPath.slice();
+    errorIndices.forEach((idx, i) => {
+        currentCode[idx] = wrongCommands[i];
+    });
+
+    let robotPos = { x: 0, y: 0 };
+    let collected = [];
+    let isWin = false;
+    let isRunning = false;
+    let stepIndex = 0;
+    let stepHistory = [];
+    let hintShown = false;
+
+    // Элементы DOM
+    const canvas = document.getElementById('fieldCanvas');
+    const ctx = canvas.getContext('2d');
+    const codeContainer = document.getElementById('codeContainer');
+    const messageText = document.getElementById('messageText');
+    const collectedSpan = document.getElementById('collectedCount');
+    const stepSpan = document.getElementById('stepCount');
+    const statusSpan = document.getElementById('statusDisplay');
+    const taskHint = document.getElementById('taskHint');
+    const runBtn = document.getElementById('runBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const hintBtn = document.getElementById('hintBtn');
+
+    // =================== ОТРИСОВКА ===================
+    function drawField() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Сетка
+        ctx.strokeStyle = '#3a5a6a';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= SIZE; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * CELL, 0);
+            ctx.lineTo(i * CELL, SIZE * CELL);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i * CELL);
+            ctx.lineTo(SIZE * CELL, i * CELL);
+            ctx.stroke();
+        }
+
+        // Предметы
+        ITEMS.forEach((item, idx) => {
+            const isCollected = collected.includes(idx);
+            ctx.font = '30px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            if (isCollected) {
+                ctx.fillStyle = 'rgba(255,215,0,0.3)';
+                ctx.fillText('⭐', item.x * CELL + CELL/2, item.y * CELL + CELL/2);
+            } else {
+                ctx.fillStyle = '#f1c40f';
+                ctx.shadowColor = 'rgba(241,196,15,0.5)';
+                ctx.shadowBlur = 15;
+                ctx.fillText('⭐', item.x * CELL + CELL/2, item.y * CELL + CELL/2);
+                ctx.shadowBlur = 0;
+            }
+        });
+
+        // Финиш
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(FINISH.x * CELL + CELL/2, FINISH.y * CELL + CELL/2, 16, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🏁', FINISH.x * CELL + CELL/2, FINISH.y * CELL + CELL/2 + 2);
+
+        // Старт
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(0 * CELL + CELL/2, 0 * CELL + CELL/2, 12, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('S', 0 * CELL + CELL/2, 0 * CELL + CELL/2);
+
+        // Робот
+        const rx = robotPos.x * CELL + CELL/2;
+        const ry = robotPos.y * CELL + CELL/2;
+        ctx.font = '44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🤖', rx, ry);
+
+        // Путь (история шагов)
+        if (stepHistory.length > 0) {
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#2ecc71';
+            stepHistory.forEach((pos, idx) => {
+                if (idx === stepHistory.length - 1) return;
+                ctx.beginPath();
+                ctx.arc(pos.x * CELL + CELL/2, pos.y * CELL + CELL/2, 6, 0, 2*Math.PI);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // =================== ОБНОВЛЕНИЕ КОДА (БЕЗ ПОДСВЕТКИ) ===================
+    function renderCode() {
+        codeContainer.innerHTML = '';
+        currentCode.forEach((cmdIdx, index) => {
+            const div = document.createElement('div');
+            div.className = 'code-line';
+
+            const num = document.createElement('span');
+            num.className = 'line-num';
+            num.textContent = (index + 1) + '.';
+            div.appendChild(num);
+
+            const select = document.createElement('select');
+            select.disabled = isWin || isRunning;
+            const labels = ['⬆ вверх', '⬇ вниз', '⬅ влево', '➡ вправо'];
+            labels.forEach((label, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = label;
+                if (idx === cmdIdx) opt.selected = true;
+                select.appendChild(opt);
+            });
+            select.addEventListener('change', function() {
+                if (isWin || isRunning) return;
+                currentCode[index] = parseInt(this.value);
+                // Сбрасываем робота при изменении кода
+                if (!isRunning) {
+                    resetRobotState();
+                }
+            });
+            div.appendChild(select);
+
+            codeContainer.appendChild(div);
+        });
+        // Статус обновляется только по результатам запуска, без подсчёта ошибок
+    }
+
+    // =================== СБРОС ПОЗИЦИИ ===================
+    function resetRobotState() {
+        robotPos = { x: 0, y: 0 };
+        collected = [];
+        stepIndex = 0;
+        stepHistory = [];
+        isWin = false;
+        isRunning = false;
+        collectedSpan.textContent = '0/3';
+        stepSpan.textContent = '0';
+        document.querySelectorAll('#codeContainer select').forEach(s => s.disabled = false);
+        drawField();
+        messageText.innerHTML = 'Исправьте ошибки в коде и запустите робота';
+        statusSpan.textContent = 'Готов';
+        statusSpan.style.color = '#8ab4d8';
+        runBtn.disabled = false;
+    }
+
+    // =================== ЗАПУСК РОБОТА ===================
+    function runRobot() {
+        if (isRunning) return;
+        if (isWin) {
+            resetRobotState();
+        }
+
+        // Проверяем, не выходит ли за пределы (без проверки ошибок)
+        let testPos = { x: 0, y: 0 };
+        let testCollected = [];
+        let valid = true;
+        for (let cmd of currentCode) {
+            testPos.x += DX[cmd];
+            testPos.y += DY[cmd];
+            if (testPos.x < 0 || testPos.x >= SIZE || testPos.y < 0 || testPos.y >= SIZE) {
+                valid = false;
+                break;
+            }
+            ITEMS.forEach((item, idx) => {
+                if (testPos.x === item.x && testPos.y === item.y && !testCollected.includes(idx)) {
+                    testCollected.push(idx);
+                }
+            });
+        }
+        if (!valid) {
+            messageText.innerHTML = '⚠️ Робот выйдет за пределы поля! Исправьте код.';
+            return;
+        }
+
+        // Запускаем симуляцию
+        isRunning = true;
+        runBtn.disabled = true;
+        document.querySelectorAll('#codeContainer select').forEach(s => s.disabled = true);
+
+        let pos = { x: 0, y: 0 };
+        let collectedItems = [];
+        let steps = 0;
+        stepHistory = [];
+
+        messageText.innerHTML = '🤖 Робот выполняет программу...';
+
+        function step() {
+            if (steps >= currentCode.length) {
+                // Проверяем результат
+                const allCollected = collectedItems.length === ITEMS.length;
+                const atFinish = pos.x === FINISH.x && pos.y === FINISH.y;
+                if (allCollected && atFinish) {
+                    isWin = true;
+                    isRunning = false;
+                    messageText.innerHTML = '🎉 <span class="win-text">Маленький принц</span> 🎉';
+                    statusSpan.textContent = '🏆 Победа!';
+                    statusSpan.style.color = '#f1c40f';
+                    runBtn.disabled = false;
+                    document.querySelectorAll('#codeContainer select').forEach(s => s.disabled = true);
+                } else {
+                    let msg = '❌ Робот не выполнил задание: ';
+                    if (!allCollected) msg += 'не все звёздочки собраны ';
+                    if (!atFinish) msg += 'не дошёл до финиша';
+                    messageText.innerHTML = msg;
+                    statusSpan.textContent = 'Неудача';
+                    statusSpan.style.color = '#e74c3c';
+                    isRunning = false;
+                    runBtn.disabled = false;
+                    document.querySelectorAll('#codeContainer select').forEach(s => s.disabled = false);
+                }
+                return;
+            }
+
+            const cmd = currentCode[steps];
+            pos.x += DX[cmd];
+            pos.y += DY[cmd];
+            stepHistory.push({ x: pos.x, y: pos.y });
+            robotPos = { x: pos.x, y: pos.y };
+
+            ITEMS.forEach((item, idx) => {
+                if (pos.x === item.x && pos.y === item.y && !collectedItems.includes(idx)) {
+                    collectedItems.push(idx);
+                }
+            });
+            collected = collectedItems;
+            collectedSpan.textContent = collectedItems.length + '/3';
+            stepSpan.textContent = steps + 1;
+
+            drawField();
+            steps++;
+            setTimeout(step, 250);
+        }
+
+        setTimeout(step, 400);
+    }
+
+    // =================== ПОДСКАЗКА ===================
+    function showHint() {
+        if (isWin || isRunning) return;
+        let hintMsg = '🔍 Ошибки в строках: ';
+        const errors = [];
+        errorIndices.forEach(idx => {
+            if (currentCode[idx] !== correctPath[idx]) {
+                errors.push(idx + 1);
+            }
+        });
+        if (errors.length === 0) {
+            hintMsg = '✅ Все ошибки уже исправлены! Запускай!';
+        } else {
+            hintMsg += errors.join(', ') + '. ';
+            hintMsg += 'Подсказка: проверь направления (вверх/вниз/влево/вправо).';
+        }
+        messageText.innerHTML = hintMsg;
+    }
+
+    // =================== ПОЛНЫЙ СБРОС ===================
+    function fullReset() {
+        if (isRunning) return;
+        currentCode = correctPath.slice();
+        errorIndices.forEach((idx, i) => {
+            currentCode[idx] = wrongCommands[i];
+        });
+        resetRobotState();
+        renderCode();
+        drawField();
+        messageText.innerHTML = 'Код сброшен к исходному с ошибками. Найдите 5 ошибок!';
+        statusSpan.textContent = 'Готов';
+        statusSpan.style.color = '#8ab4d8';
+        runBtn.disabled = false;
+        document.querySelectorAll('#codeContainer select').forEach(s => s.disabled = false);
+    }
+
+    // =================== ИНИЦИАЛИЗАЦИЯ ===================
+    function init() {
+        renderCode();
+        resetRobotState();
+        drawField();
+        messageText.innerHTML = 'Исправьте 5 ошибок в коде, соберите 3 звёздочки и дойдите до флага!';
+    }
+
+    // Обработчики
+    runBtn.addEventListener('click', runRobot);
+    resetBtn.addEventListener('click', fullReset);
+    hintBtn.addEventListener('click', showHint);
+
+    // =================== QR ===================
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // =================== СТАРТ ===================
+    init();
+})();
+</script>
+</body>
+</html>
