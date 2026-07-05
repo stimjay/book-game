@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Троль и камни 🧌</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+        body { background: #1a0a0a; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; }
+        .game-wrapper { background: linear-gradient(145deg, #2a1a1a, #1a0a0a); padding: 20px; border-radius: 30px; border: 3px solid #6a4a3a; box-shadow: 0 20px 40px rgba(0,0,0,0.8); max-width: 700px; width: 100%; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .title { color: #f1c40f; font-size: 24px; font-family: 'Comic Sans MS', cursive; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .title .bounce { display: inline-block; animation: bounce 2s ease-in-out infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .qr-btn { background: #2980b9; border: none; color: white; padding: 6px 18px; border-radius: 30px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #1a5276; transition: 0.15s; }
+        .qr-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .stats { display: flex; justify-content: space-between; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 12px; border: 1px solid #6a4a3a; margin-bottom: 10px; color: #ddd; font-weight: bold; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .stats span { background: rgba(0,0,0,0.3); padding: 3px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+        .stats .value { color: #f1c40f; }
+        .stats .color-preview { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; display: inline-block; }
+
+        canvas { display: block; width: 100%; height: auto; background: radial-gradient(circle at 30% 30%, #2a4a3a, #0a1a0a); border-radius: 20px; border: 4px solid #3d2b1f; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); cursor: crosshair; touch-action: none; }
+
+        .controls { display: flex; justify-content: center; gap: 15px; margin-top: 12px; flex-wrap: wrap; }
+        .btn { background: linear-gradient(180deg, #4a3a2a, #2a1a0f); border: none; color: white; padding: 10px 22px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #1a0a05; border: 1px solid #6a4a3a; transition: 0.08s; touch-action: manipulation; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #1a0a05; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #1a0a05; }
+        .btn.start { background: linear-gradient(180deg, #27ae60, #1e8449); box-shadow: 0 4px 0 #145a32; min-width: 100px; }
+
+        .result { text-align: center; margin-top: 10px; font-size: 16px; color: #f1c40f; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 12px; border: 1px solid #6a4a3a; min-height: 45px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+        .yellow-square { background: #f1c40f; color: #1a0a0a; padding: 4px 14px; border-radius: 6px; font-size: 26px; font-weight: 700; box-shadow: 0 3px 0 #b7950b; min-width: 44px; text-align: center; display: none; transition: 0.3s; }
+        .yellow-square.show { display: inline-block; animation: squareAppear 0.5s ease-out; }
+        @keyframes squareAppear { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        .restart-btn { background: #e67e22; border: none; color: white; padding: 5px 18px; border-radius: 30px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 0 #d35400; transition: 0.2s; }
+        .restart-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #d35400; }
+        .restart-btn:hover { background: #f39c12; }
+
+        .hint { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; margin-top: 6px; font-style: italic; }
+
+        /* QR modal */
+        .qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content { background: white; padding: 25px 30px 30px; border-radius: 25px; text-align: center; max-width: 400px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); max-height: 92vh; overflow-y: auto; }
+        .qr-modal-content h2 { color: #2d2117; font-size: 20px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 12px; font-size: 13px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box { background: #f5f5f5; padding: 8px 10px; border-radius: 8px; margin: 10px 0; word-break: break-all; font-size: 12px; color: #555; border: 1px solid #ddd; text-align: left; font-family: monospace; max-height: 50px; overflow-y: auto; }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #ddd; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-input-group button:hover { background: #2ecc71; }
+        .qr-close-btn { background: #e74c3c; border: none; color: white; padding: 10px 30px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #c0392b; margin-top: 8px; width: 100%; }
+        .qr-close-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #c0392b; }
+        .qr-close-btn:hover { background: #c0392b; }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #f8f8f8; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 600px) { .title { font-size: 20px; } .stats { font-size: 14px; } canvas { height: 400px; } .btn { padding: 8px 16px; font-size: 14px; } .qr-modal-content { padding: 20px; } }
+        @media (max-width: 400px) { canvas { height: 330px; } .title { font-size: 16px; } }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="header">
+        <div class="title"><span class="bounce">🧌</span> Троль и камни</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="stats">
+        <span>💎 Камней: <span class="value" id="stoneCount">0</span></span>
+        <span>🎯 Очки: <span class="value" id="scoreCount">0</span></span>
+        <span>🎨 Цвет: <span class="color-preview" id="colorPreview"></span> <span class="value" id="colorName">-</span></span>
+        <span>🏆 <span class="value" id="statusDisplay">Готов</span></span>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="450"></canvas>
+
+    <div class="controls">
+        <button class="btn" id="resetBtn">🔄 Заново</button>
+        <button class="btn start" id="startBtn">⚡ Играть</button>
+    </div>
+
+    <div class="result">
+        <span id="message">Нажмите «Играть»</span>
+        <span class="yellow-square" id="yellowSquare">6</span>
+    </div>
+    <div class="hint" id="hintText">Кликните/коснитесь, чтобы выстрелить камнем в цепочку. Собирайте группы по 3+</div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ====== НАСТРОЙКИ ======
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 600, H = 450;
+
+    // Элементы UI
+    const stoneCountSpan = document.getElementById('stoneCount');
+    const scoreCountSpan = document.getElementById('scoreCount');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const message = document.getElementById('message');
+    const yellowSquare = document.getElementById('yellowSquare');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const hint = document.getElementById('hintText');
+    const colorPreview = document.getElementById('colorPreview');
+    const colorName = document.getElementById('colorName');
+
+    // ====== ПЕРЕМЕННЫЕ ======
+    const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6'];
+    const COLOR_NAMES = ['красный', 'синий', 'зелёный', 'жёлтый', 'фиолетовый'];
+
+    let chain = [];
+    let chainAngle = 0;
+    const CHAIN_RADIUS = 140;
+    const CENTER_X = 300, CENTER_Y = 220;
+    const STONE_RADIUS = 18;
+
+    let score = 0;
+    let gameActive = false;
+    let gameOver = false;
+    let gameWon = false;
+
+    let currentColorIndex = 0;
+    let flyingStone = null;
+
+    // Победа при 500 очках (изменено с 1000)
+    const WIN_SCORE = 500;
+
+    // ====== ИНИЦИАЛИЗАЦИЯ ЦЕПОЧКИ ======
+    function initChain() {
+        chain = [];
+        const count = 5 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const x = CENTER_X + CHAIN_RADIUS * Math.cos(angle);
+            const y = CENTER_Y + CHAIN_RADIUS * Math.sin(angle);
+            const colorIndex = Math.floor(Math.random() * COLORS.length);
+            chain.push({ x, y, colorIndex, angle });
+        }
+        chain.forEach((s, idx) => {
+            s.angle = (idx / chain.length) * Math.PI * 2;
+        });
+        chainAngle = 0;
+        currentColorIndex = Math.floor(Math.random() * COLORS.length);
+        updateUI();
+        updateColorDisplay();
+    }
+
+    // ====== ОБНОВЛЕНИЕ UI ======
+    function updateUI() {
+        stoneCountSpan.textContent = chain.length;
+        scoreCountSpan.textContent = score;
+        if (gameWon) {
+            statusDisplay.textContent = '🏆 Победа!';
+            statusDisplay.style.color = '#f1c40f';
+        } else if (gameOver) {
+            statusDisplay.textContent = '💀 Поражение';
+            statusDisplay.style.color = '#e74c3c';
+        } else if (gameActive) {
+            statusDisplay.textContent = 'Игра идёт...';
+            statusDisplay.style.color = '#2ecc71';
+        } else {
+            statusDisplay.textContent = 'Готов';
+            statusDisplay.style.color = '#ddd';
+        }
+    }
+
+    function updateColorDisplay() {
+        colorPreview.style.backgroundColor = COLORS[currentColorIndex];
+        colorName.textContent = COLOR_NAMES[currentColorIndex];
+    }
+
+    // ====== ОТРИСОВКА ======
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // --- Троль ---
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#2d1a0f';
+        ctx.beginPath();
+        ctx.arc(300, 420, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.font = '48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#6a4a3a';
+        ctx.fillText('🧌', 300, 415);
+        ctx.restore();
+
+        // --- Следующий цвет ---
+        ctx.save();
+        const nextX = 300 + 60;
+        const nextY = 420;
+        ctx.shadowColor = 'rgba(255,255,255,0.3)';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(nextX, nextY, STONE_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS[currentColorIndex];
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+
+        // --- Цепочка ---
+        for (let i = 0; i < chain.length; i++) {
+            const s = chain[i];
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, STONE_RADIUS, 0, Math.PI * 2);
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = COLORS[s.colorIndex];
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(s.x - 5, s.y - 5, 5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fill();
+        }
+
+        // --- Летящий камень ---
+        if (flyingStone) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(255,255,255,0.3)';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(flyingStone.x, flyingStone.y, STONE_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = COLORS[flyingStone.colorIndex];
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // --- Прицел ---
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.arc(CENTER_X, CENTER_Y, CHAIN_RADIUS + 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // ====== ДВИЖЕНИЕ ЦЕПОЧКИ ======
+    function updateChain() {
+        if (!gameActive || gameOver || gameWon) return;
+        chainAngle += 0.004;
+        for (let i = 0; i < chain.length; i++) {
+            const s = chain[i];
+            const angle = (i / chain.length) * Math.PI * 2 + chainAngle;
+            s.x = CENTER_X + CHAIN_RADIUS * Math.cos(angle);
+            s.y = CENTER_Y + CHAIN_RADIUS * Math.sin(angle);
+            s.angle = angle;
+        }
+    }
+
+    // ====== ВЫСТРЕЛ ======
+    function shoot(targetX, targetY) {
+        if (!gameActive || gameOver || gameWon) return;
+        if (flyingStone) return;
+        if (chain.length === 0) return;
+
+        let closestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < chain.length; i++) {
+            const s = chain[i];
+            const dx = s.x - targetX;
+            const dy = s.y - targetY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < minDist) {
+                minDist = dist;
+                closestIdx = i;
+            }
+        }
+        if (minDist > 100) {
+            message.textContent = '😅 Цельтесь ближе к цепочке!';
+            return;
+        }
+
+        const colorIndex = currentColorIndex;
+        currentColorIndex = Math.floor(Math.random() * COLORS.length);
+        updateColorDisplay();
+
+        const startX = 300, startY = 390;
+        const target = chain[closestIdx];
+        flyingStone = {
+            x: startX,
+            y: startY,
+            targetX: target.x,
+            targetY: target.y,
+            colorIndex: colorIndex,
+            speed: 6,
+            targetIndex: closestIdx
+        };
+    }
+
+    function updateFlyingStone() {
+        if (!flyingStone) return;
+        const fs = flyingStone;
+        const dx = fs.targetX - fs.x;
+        const dy = fs.targetY - fs.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 5) {
+            insertStone(fs.targetIndex, fs.colorIndex);
+            flyingStone = null;
+            checkMatches();
+        } else {
+            const step = Math.min(fs.speed, dist);
+            fs.x += (dx / dist) * step;
+            fs.y += (dy / dist) * step;
+        }
+    }
+
+    function insertStone(index, colorIndex) {
+        if (chain.length === 0) return;
+        const newStone = {
+            x: chain[index].x,
+            y: chain[index].y,
+            colorIndex: colorIndex,
+            angle: chain[index].angle
+        };
+        chain.splice(index, 0, newStone);
+        recalcChainPositions();
+        updateUI();
+    }
+
+    function recalcChainPositions() {
+        for (let i = 0; i < chain.length; i++) {
+            const s = chain[i];
+            const angle = (i / chain.length) * Math.PI * 2 + chainAngle;
+            s.x = CENTER_X + CHAIN_RADIUS * Math.cos(angle);
+            s.y = CENTER_Y + CHAIN_RADIUS * Math.sin(angle);
+            s.angle = angle;
+        }
+    }
+
+    // ====== ПРОВЕРКА ГРУПП И ПОБЕДЫ ======
+    function checkMatches() {
+        let anyRemoved = false;
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (let i = 0; i < chain.length; i++) {
+                let count = 1;
+                let color = chain[i].colorIndex;
+                let j = i + 1;
+                while (j < chain.length && chain[j].colorIndex === color) { count++; j++; }
+                let k = i - 1;
+                while (k >= 0 && chain[k].colorIndex === color) { count++; k--; }
+                if (count >= 3) {
+                    const start = k + 1;
+                    const end = j;
+                    chain.splice(start, end - start);
+                    score += count * 10;
+                    anyRemoved = true;
+                    changed = true;
+                    updateUI();
+                    // Проверяем победу по очкам (500)
+                    if (score >= WIN_SCORE) {
+                        winGame('очки');
+                        return;
+                    }
+                    break;
+                }
+            }
+        }
+        if (anyRemoved) {
+            if (chain.length === 0) {
+                winGame('цепочка');
+            } else {
+                recalcChainPositions();
+            }
+        }
+        updateUI();
+    }
+
+    // ====== ПОБЕДА ======
+    function winGame(reason) {
+        if (gameWon) return;
+        gameActive = false;
+        gameWon = true;
+        statusDisplay.textContent = '🏆 Победа!';
+        statusDisplay.style.color = '#f1c40f';
+        if (reason === 'очки') {
+            message.textContent = '🎉 Вы набрали 500 очков!';
+        } else {
+            message.textContent = '🎉 Вы очистили все камни!';
+        }
+        yellowSquare.classList.add('show');
+        startBtn.disabled = false;
+        hint.textContent = 'Поздравляем! Вы прошли испытание!';
+        updateUI();
+    }
+
+    // ====== СБРОС ======
+    function resetGame() {
+        flyingStone = null;
+        gameActive = false;
+        gameOver = false;
+        gameWon = false;
+        score = 0;
+        yellowSquare.classList.remove('show');
+        statusDisplay.textContent = 'Готов';
+        statusDisplay.style.color = '#ddd';
+        message.textContent = 'Нажмите «Играть»';
+        startBtn.disabled = false;
+        hint.textContent = 'Кликните/коснитесь, чтобы выстрелить камнем в цепочку. Собирайте группы по 3+';
+        initChain();
+        updateUI();
+        updateColorDisplay();
+    }
+
+    function startGame() {
+        resetGame();
+        gameActive = true;
+        statusDisplay.textContent = 'Игра идёт...';
+        statusDisplay.style.color = '#2ecc71';
+        message.textContent = 'Стреляйте по цепочке!';
+        startBtn.disabled = true;
+        hint.textContent = 'Цельтесь в цепочку и кликайте!';
+        initChain();
+        updateUI();
+        updateColorDisplay();
+    }
+
+    // ====== ОБРАБОТЧИКИ ======
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        let clientX, clientY;
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+            e.preventDefault();
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+        shoot(x, y);
+    }
+
+    canvas.addEventListener('click', handleCanvasClick);
+    canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
+
+    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', function() {
+        resetGame();
+        startBtn.disabled = false;
+    });
+
+    // ====== ИГРОВОЙ ЦИКЛ ======
+    function gameLoop() {
+        if (gameActive && !gameOver && !gameWon) {
+            updateChain();
+            updateFlyingStone();
+        }
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ====== QR ======
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, { text: text, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // ====== СТАРТ ======
+    resetGame();
+    gameLoop();
+})();
+</script>
+</body>
+</html>
