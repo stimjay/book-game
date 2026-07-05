@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Лабиринт — Лес душ 🌲</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: #1a0f0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 15px;
+            color: #eee;
+        }
+        .game-wrapper {
+            background: #2a1a0f;
+            padding: 25px;
+            border-radius: 30px;
+            border: 2px solid #6a4a2a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            max-width: 700px;
+            width: 100%;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .title {
+            color: #8bc34a;
+            font-size: 24px;
+            font-family: 'Comic Sans MS', cursive;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #1a5276;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .qr-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid #6a4a2a;
+            margin-bottom: 12px;
+            color: #ccc;
+            font-weight: bold;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .stats span { background: rgba(0,0,0,0.3); padding: 3px 12px; border-radius: 16px; }
+        .stats .value { color: #8bc34a; }
+
+        .canvas-container {
+            position: relative;
+            background: #1a0f0a;
+            border-radius: 16px;
+            padding: 8px;
+            border: 2px solid #5a3a1a;
+            margin-bottom: 12px;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #2a1a0f;
+            border-radius: 10px;
+            touch-action: none;
+            cursor: pointer;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .btn {
+            background: #3a2a1a;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a0f0a;
+            border: 1px solid #6a4a2a;
+            transition: 0.08s;
+            touch-action: manipulation;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #1a0f0a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #1a0f0a; }
+        .btn.reset { background: #6a4a2a; box-shadow: 0 4px 0 #3a2a1a; border-color: #8a6a3a; }
+        .btn.reset:hover { background: #8a6a3a; }
+
+        .message-area {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            min-height: 50px;
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 2px dashed #5a3a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .win-text {
+            color: #8bc34a;
+            text-shadow: 0 0 20px rgba(139,195,74,0.5);
+            animation: glow 1.5s ease-in-out infinite alternate;
+            font-size: 30px;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px rgba(139,195,74,0.2); }
+            100% { text-shadow: 0 0 30px rgba(139,195,74,0.8); }
+        }
+
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content {
+            background: white;
+            padding: 25px 30px 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 400px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            max-height: 92vh;
+            overflow-y: auto;
+        }
+        .qr-modal-content h2 { color: #2d2117; font-size: 20px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 12px; font-size: 13px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box {
+            background: #f5f5f5;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #555;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-family: monospace;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #ddd; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-close-btn {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #c0392b;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .qr-close-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #c0392b; }
+        .qr-close-btn:hover { background: #c0392b; }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #f8f8f8; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 600px) {
+            .title { font-size: 20px; }
+            .stats { font-size: 14px; }
+            .btn { padding: 8px 16px; font-size: 14px; }
+            .win-text { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="header">
+        <div class="title">🌲 3D Лабиринт</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="stats">
+        <span>⏱️ Шагов: <span class="value" id="stepCount">0</span></span>
+        <span>🏆 <span class="value" id="statusDisplay">Играй</span></span>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="mazeCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <div class="controls">
+        <button class="btn reset" id="resetBtn">🔄 Новый лабиринт</button>
+    </div>
+
+    <div class="message-area" id="messageArea">
+        <span id="messageText">Найди выход из леса! 🌲</span>
+    </div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // =================== ПАРАМЕТРЫ ===================
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 600, H = 600;
+
+    const COLS = 21;
+    const ROWS = 21;
+    const CELL_SIZE = W / COLS;
+
+    let maze = [];
+    let player = { x: 1, y: 1 };
+    let exit = { x: COLS-2, y: ROWS-2 };
+    let steps = 0;
+    let gameWon = false;
+
+    const stepSpan = document.getElementById('stepCount');
+    const statusSpan = document.getElementById('statusDisplay');
+    const messageText = document.getElementById('messageText');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // =================== ГЕНЕРАЦИЯ ===================
+    function generateMaze() {
+        maze = [];
+        for (let r = 0; r < ROWS; r++) {
+            maze[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                maze[r][c] = 0;
+            }
+        }
+        const startX = 1, startY = 1;
+        maze[startY][startX] = 1;
+        const stack = [{ x: startX, y: startY }];
+        const dirs = [{ dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }];
+        while (stack.length > 0) {
+            const cur = stack[stack.length - 1];
+            const neighbors = [];
+            for (let d of dirs) {
+                const nx = cur.x + d.dx, ny = cur.y + d.dy;
+                if (nx > 0 && nx < COLS-1 && ny > 0 && ny < ROWS-1 && maze[ny][nx] === 0) {
+                    neighbors.push({ x: nx, y: ny, dx: d.dx, dy: d.dy });
+                }
+            }
+            if (neighbors.length > 0) {
+                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                maze[cur.y + next.dy/2][cur.x + next.dx/2] = 1;
+                maze[next.y][next.x] = 1;
+                stack.push({ x: next.x, y: next.y });
+            } else {
+                stack.pop();
+            }
+        }
+        // Гарантируем доступ к выходу
+        maze[exit.y][exit.x] = 1;
+        if (exit.x > 1 && maze[exit.y][exit.x-1] === 0) maze[exit.y][exit.x-1] = 1;
+        if (exit.x < COLS-2 && maze[exit.y][exit.x+1] === 0) maze[exit.y][exit.x+1] = 1;
+        if (exit.y > 1 && maze[exit.y-1][exit.x] === 0) maze[exit.y-1][exit.x] = 1;
+        if (exit.y < ROWS-2 && maze[exit.y+1][exit.x] === 0) maze[exit.y+1][exit.x] = 1;
+    }
+
+    // =================== ОТРИСОВКА (лесные цвета) ===================
+    function drawMaze() {
+        ctx.clearRect(0, 0, W, H);
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const x = c * CELL_SIZE;
+                const y = r * CELL_SIZE;
+                if (maze[r][c] === 0) {
+                    // Стена — ствол дерева
+                    const grad = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
+                    grad.addColorStop(0, '#5a3a1a');
+                    grad.addColorStop(0.5, '#3a2a1a');
+                    grad.addColorStop(1, '#2a1a0a');
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 6;
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    ctx.shadowBlur = 0;
+                    // Имитация коры
+                    ctx.fillStyle = 'rgba(255,200,150,0.08)';
+                    ctx.fillRect(x+4, y+4, 3, CELL_SIZE-8);
+                } else {
+                    // Пол — лесная подстилка
+                    const shade = (r + c) % 2 === 0 ? '#2a3a1a' : '#1a2a0a';
+                    ctx.fillStyle = shade;
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    // Трава
+                    ctx.fillStyle = 'rgba(139,195,74,0.05)';
+                    ctx.fillRect(x+2, y+2, 4, 4);
+                    ctx.fillRect(x+CELL_SIZE-6, y+CELL_SIZE-6, 4, 4);
+                }
+            }
+        }
+
+        // Финиш — светящийся гриб или флаг
+        const ex = exit.x * CELL_SIZE + CELL_SIZE/2;
+        const ey = exit.y * CELL_SIZE + CELL_SIZE/2;
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#8bc34a';
+        ctx.shadowBlur = 25;
+        ctx.fillStyle = '#8bc34a';
+        ctx.fillText('🏁', ex, ey);
+        ctx.shadowBlur = 0;
+
+        // Игрок — дух леса
+        const px = player.x * CELL_SIZE + CELL_SIZE/2;
+        const py = player.y * CELL_SIZE + CELL_SIZE/2;
+        ctx.shadowColor = 'rgba(139,195,74,0.6)';
+        ctx.shadowBlur = 25;
+        const grd = ctx.createRadialGradient(px-4, py-4, 2, px, py, CELL_SIZE/2-2);
+        grd.addColorStop(0, '#a5d6a7');
+        grd.addColorStop(1, '#2e7d32');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(px, py, CELL_SIZE/2-4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#8bc34a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Глаза (как у лесного духа)
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(px-5, py-4, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px+5, py-4, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(px-4, py-3, 2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px+6, py-3, 2, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    // =================== ПРОВЕРКА ПОБЕДЫ ===================
+    function checkWin() {
+        if (player.x === exit.x && player.y === exit.y) {
+            gameWon = true;
+            messageText.innerHTML = '🎉 <span class="win-text">Лес душ</span> 🎉';
+            statusSpan.textContent = '🏆 Победа!';
+            statusSpan.style.color = '#8bc34a';
+        }
+    }
+
+    // =================== ДВИЖЕНИЕ ===================
+    function move(dx, dy) {
+        if (gameWon) return;
+        const newX = player.x + dx;
+        const newY = player.y + dy;
+        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS) return;
+        if (maze[newY][newX] === 0) return;
+        player.x = newX;
+        player.y = newY;
+        steps++;
+        stepSpan.textContent = steps;
+        drawMaze();
+        checkWin();
+    }
+
+    // =================== НОВЫЙ ЛАБИРИНТ ===================
+    function generateNewMaze() {
+        generateMaze();
+        player.x = 1;
+        player.y = 1;
+        steps = 0;
+        gameWon = false;
+        stepSpan.textContent = '0';
+        statusSpan.textContent = 'Играй';
+        statusSpan.style.color = '#ccc';
+        messageText.innerHTML = 'Найди выход из леса! 🌲';
+        drawMaze();
+    }
+
+    // =================== УПРАВЛЕНИЕ ===================
+    document.addEventListener('keydown', function(e) {
+        const key = e.key;
+        e.preventDefault();
+        if (key === 'ArrowUp') move(0, -1);
+        else if (key === 'ArrowDown') move(0, 1);
+        else if (key === 'ArrowLeft') move(-1, 0);
+        else if (key === 'ArrowRight') move(1, 0);
+    });
+
+    let touchStartX = 0, touchStartY = 0;
+    canvas.addEventListener('touchstart', function(e) {
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        if (!touchStartX || !touchStartY) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        if (absX < 20 && absY < 20) return;
+        if (absX > absY) {
+            if (deltaX > 0) move(1, 0);
+            else move(-1, 0);
+        } else {
+            if (deltaY > 0) move(0, 1);
+            else move(0, -1);
+        }
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function(e) {
+        touchStartX = 0;
+        touchStartY = 0;
+    }, { passive: true });
+
+    resetBtn.addEventListener('click', generateNewMaze);
+
+    // =================== QR ===================
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // =================== СТАРТ ===================
+    generateNewMaze();
+})();
+</script>
+</body>
+</html>
