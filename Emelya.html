@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Емеля ловит щуку 🎣</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(180deg, #0a1628 0%, #1a3a6a 50%, #2a5a8a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
+        .game-container { background: linear-gradient(180deg, #2a5a3a, #1a3a2a); padding: 20px; border-radius: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); width: 100%; max-width: 500px; border: 3px solid #5a8a5a; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .title { color: #f1c40f; font-size: 20px; font-family: 'Comic Sans MS', cursive; }
+        .qr-btn { background: #2980b9; border: none; color: white; padding: 6px 16px; border-radius: 30px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #1a5276; }
+        .qr-btn:active { transform: translateY(3px); box-shadow: 0 0px 0 #1a5276; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; color: white; font-size: 12px; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 12px; margin-bottom: 10px; border: 2px solid #5a8a5a; text-align: center; }
+        .stats .label { font-size: 9px; color: #aaa; display: block; }
+        .stats .value { font-size: 18px; font-weight: bold; color: #f1c40f; display: block; }
+        .stats .value.fish { color: #5dade2; }
+        .stats .value.time { color: #2ecc71; }
+        .pond { background: #1a5a7a; padding: 10px; border-radius: 20px; position: relative; height: 450px; overflow: hidden; border: 4px solid #2a7a5a; box-shadow: inset 0 0 50px rgba(0,50,100,0.3); }
+        .water { position: relative; width: 100%; height: 100%; background: radial-gradient(ellipse at 50% 80%, #1a6a8a, #0a3a5a); border-radius: 12px; overflow: hidden; }
+        .water::before { content: '~~'; position: absolute; width: 200%; height: 20px; color: rgba(255,255,255,0.05); font-size: 30px; top: 20%; animation: wave 3s linear infinite; }
+        @keyframes wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .water::after { content: ''; position: absolute; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 20px, transparent 20px, transparent 40px); }
+        .emelya { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 60px; transition: left 0.15s ease; z-index: 5; filter: drop-shadow(0 8px 20px rgba(255,100,0,0.3)); }
+        .emelya .boat { display: inline-block; animation: boatBounce 0.6s ease-in-out infinite; }
+        @keyframes boatBounce { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+        .emelya .fishing-rod { position: absolute; font-size: 30px; top: -20px; right: -30px; animation: rodMove 2s ease-in-out infinite; }
+        @keyframes rodMove { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+        .emelya .name { position: absolute; bottom: -25px; font-size: 11px; color: #f1c40f; background: rgba(0,0,0,0.7); padding: 2px 12px; border-radius: 12px; left: 50%; transform: translateX(-50%); white-space: nowrap; border: 1px solid #f1c40f; }
+        .fish { position: absolute; font-size: 45px; z-index: 4; cursor: pointer; transition: transform 0.2s; animation: fishSwim 3s ease-in-out infinite; }
+        @keyframes fishSwim { 0%, 100% { transform: translateX(-50%) scaleX(1); } 50% { transform: translateX(-50%) scaleX(-1); } }
+        .fish:active { transform: scale(1.3); }
+        .fish .bubble { position: absolute; font-size: 12px; animation: bubbleUp 1.5s ease-out infinite; }
+        @keyframes bubbleUp { 0% { transform: translateY(0) scale(0.5); opacity: 0.8; } 100% { transform: translateY(-40px) scale(1.5); opacity: 0; } }
+        .catch-effect { position: absolute; font-size: 60px; z-index: 10; animation: catchAnim 0.7s ease-out forwards; pointer-events: none; }
+        @keyframes catchAnim { 0% { transform: scale(0.2) rotate(0deg); opacity: 1; } 50% { transform: scale(1.5) rotate(180deg); opacity: 0.8; } 100% { transform: scale(2.5) rotate(360deg); opacity: 0; } }
+        .controls { display: flex; justify-content: center; gap: 15px; margin-top: 12px; flex-wrap: wrap; }
+        .btn { background: linear-gradient(180deg, #4a3a2a, #2a1a0f); border: none; color: white; padding: 12px 25px; border-radius: 12px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 0 #1a0a05; min-width: 60px; font-weight: bold; border: 1px solid #6a4a3a; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #1a0a05; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn .hint { display: block; font-size: 8px; opacity: 0.4; }
+        .btn.start { background: linear-gradient(180deg, #27ae60, #1e8449); box-shadow: 0 4px 0 #145a32; font-size: 18px; min-width: 100px; }
+        .btn.start:disabled { background: #555; box-shadow: 0 4px 0 #222; }
+        .result { text-align: center; margin-top: 10px; font-size: 14px; color: #f1c40f; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 12px; border: 1px solid #5a8a5a; min-height: 45px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+        .blue-square { 
+            background: #1565C0; 
+            color: white; 
+            padding: 4px 14px; 
+            border-radius: 6px; 
+            font-size: 24px; 
+            font-weight: 700; 
+            box-shadow: 0 3px 0 #0D47A1; 
+            min-width: 40px; 
+            text-align: center; 
+            display: none;
+            transition: all 0.3s; 
+        }
+        .blue-square.show { 
+            display: inline-block;
+            animation: squareAppear 0.5s ease-out;
+        }
+        @keyframes squareAppear {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .restart { background: #e67e22; border: none; color: white; padding: 5px 18px; border-radius: 30px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 0 #d35400; }
+        .restart:active { transform: translateY(3px); box-shadow: 0 0px 0 #d35400; }
+        .swipe-zone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; }
+        .fish-counter { position: absolute; top: 8px; right: 12px; color: rgba(255,255,255,0.2); font-size: 10px; z-index: 2; background: rgba(0,0,0,0.3); padding: 2px 10px; border-radius: 8px; }
+        .qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content { background: white; padding: 25px; border-radius: 25px; text-align: center; max-width: 400px; width: 92%; max-height: 92vh; overflow-y: auto; }
+        .qr-modal-content h2 { color: #2d2117; font-size: 20px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 12px; font-size: 13px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box { background: #f5f5f5; padding: 8px 10px; border-radius: 8px; margin: 10px 0; word-break: break-all; font-size: 12px; color: #555; border: 1px solid #ddd; text-align: left; font-family: monospace; max-height: 50px; overflow-y: auto; }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #ddd; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-close-btn { background: #e74c3c; border: none; color: white; padding: 10px 30px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #c0392b; margin-top: 8px; width: 100%; }
+        .qr-close-btn:active { transform: translateY(3px); box-shadow: 0 0px 0 #c0392b; }
+        .qr-help { font-size: 11px; color: #999; margin-top: 6px; padding: 8px; background: #f8f8f8; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+        @media (max-width: 500px) { .pond { height: 380px; } .emelya { font-size: 50px; } .fish { font-size: 38px; } .btn { padding: 8px 16px; font-size: 20px; min-width: 45px; } .btn.start { font-size: 15px; min-width: 80px; } }
+        @media (max-width: 380px) { .pond { height: 320px; } .emelya { font-size: 40px; } .fish { font-size: 32px; } }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="header">
+        <div class="title">🎣 Емеля ловит щуку</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="stats">
+        <div><span class="label">⏱️ Время</span><span class="value time" id="timerDisplay">0:00</span></div>
+        <div><span class="label">🐟 Поймано</span><span class="value fish" id="fishCount">0/5</span></div>
+        <div><span class="label">❤️ Попытки</span><span class="value" id="attemptDisplay">3</span></div>
+    </div>
+
+    <div class="pond" id="pond">
+        <div class="water" id="water">
+            <div class="fish-counter" id="fishCounter">🐟 0/5</div>
+            <div class="emelya" id="emelya">
+                <span class="boat">🧙‍♂️</span>
+                <span class="fishing-rod">🎣</span>
+                <span class="name">Емеля</span>
+            </div>
+            <div class="swipe-zone" id="swipeZone"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="moveLeft">⬅️ <span class="hint">A</span></button>
+        <button class="btn start" id="startBtn">🎣 Ловить</button>
+        <button class="btn" id="moveRight">➡️ <span class="hint">D</span></button>
+    </div>
+
+    <div class="result" id="result">
+        <span id="message">Нажмите "Ловить"</span>
+        <span class="blue-square" id="blueSquare">8</span>
+        <button class="restart" id="restartBtn">🔄 Заново</button>
+    </div>
+</div>
+
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // === ЭЛЕМЕНТЫ ===
+    var emelya = document.getElementById('emelya');
+    var water = document.getElementById('water');
+    var timerDisplay = document.getElementById('timerDisplay');
+    var fishCountDisplay = document.getElementById('fishCount');
+    var attemptDisplay = document.getElementById('attemptDisplay');
+    var message = document.getElementById('message');
+    var blueSquare = document.getElementById('blueSquare');
+    var startBtn = document.getElementById('startBtn');
+    var moveLeftBtn = document.getElementById('moveLeft');
+    var moveRightBtn = document.getElementById('moveRight');
+    var restartBtn = document.getElementById('restartBtn');
+    var fishCounter = document.getElementById('fishCounter');
+    var swipeZone = document.getElementById('swipeZone');
+
+    // === КОНСТАНТЫ ===
+    var MAX_ATTEMPTS = 3;
+    var MAX_FISH = 5;
+    var FISH_SPAWN_INTERVAL = 2500;
+    var GAME_TIME = 30;
+
+    // === ПЕРЕМЕННЫЕ ===
+    var lanePositions = [0, 33.33, 66.66];
+    var currentLane = 1;
+    var gameRunning = false;
+    var timer = 0;
+    var timerInterval = null;
+    var attempts = MAX_ATTEMPTS;
+    var fishList = [];
+    var fishInterval = null;
+    var raceCompleted = false;
+    var isGameOver = false;
+    var frameId = null;
+    var caughtFish = 0;
+    var fishSpawned = 0;
+
+    function updateEmelyaPosition() {
+        emelya.style.left = lanePositions[currentLane] + '%';
+    }
+
+    function formatTime(seconds) {
+        var mins = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
+    function setControlsEnabled(enabled) {
+        moveLeftBtn.disabled = !enabled;
+        moveRightBtn.disabled = !enabled;
+        startBtn.disabled = enabled;
+    }
+    setControlsEnabled(false);
+
+    function spawnFish() {
+        if (!gameRunning || isGameOver || fishSpawned >= MAX_FISH) return;
+        
+        var lane = Math.floor(Math.random() * 3);
+        var fish = document.createElement('div');
+        fish.className = 'fish';
+        fish.innerHTML = '🐟<span class="bubble">〇</span>';
+        fish.style.left = lanePositions[lane] + '%';
+        fish.style.top = (10 + Math.random() * 60) + '%';
+        fish.style.transform = 'translateX(-50%)';
+        fish.dataset.lane = lane;
+        fish.style.animationDelay = (Math.random() * 2) + 's';
+        water.appendChild(fish);
+        fishList.push(fish);
+        fishSpawned++;
+        
+        fishCounter.textContent = '🐟 ' + caughtFish + '/' + MAX_FISH;
+        fishCountDisplay.textContent = caughtFish + '/' + MAX_FISH;
+        
+        fish.addEventListener('click', function(e) {
+            e.stopPropagation();
+            catchFish(fish);
+        });
+        fish.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            catchFish(fish);
+        }, { passive: false });
+        
+        setTimeout(function() {
+            if (fish.parentNode) {
+                fish.remove();
+                var index = fishList.indexOf(fish);
+                if (index > -1) {
+                    fishList.splice(index, 1);
+                }
+            }
+        }, 5000);
+    }
+
+    function catchFish(fish) {
+        if (!gameRunning || isGameOver) return;
+        if (!fish.parentNode) return;
+        
+        var rect = fish.getBoundingClientRect();
+        var waterRect = water.getBoundingClientRect();
+        var catchEffect = document.createElement('div');
+        catchEffect.className = 'catch-effect';
+        catchEffect.textContent = '🎣🐟';
+        catchEffect.style.left = (rect.left - waterRect.left + rect.width/2 - 30) + 'px';
+        catchEffect.style.top = (rect.top - waterRect.top + rect.height/2 - 30) + 'px';
+        water.appendChild(catchEffect);
+        setTimeout(function() { catchEffect.remove(); }, 700);
+        
+        fish.remove();
+        var index = fishList.indexOf(fish);
+        if (index > -1) {
+            fishList.splice(index, 1);
+        }
+        caughtFish++;
+        fishCounter.textContent = '🐟 ' + caughtFish + '/' + MAX_FISH;
+        fishCountDisplay.textContent = caughtFish + '/' + MAX_FISH;
+        
+        if (caughtFish >= MAX_FISH) {
+            setTimeout(function() {
+                if (gameRunning && !isGameOver) {
+                    gameOver(true);
+                }
+            }, 500);
+        }
+    }
+
+    function gameOver(win) {
+        if (isGameOver) return;
+        isGameOver = true;
+        gameRunning = false;
+        
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        if (fishInterval) {
+            clearInterval(fishInterval);
+            fishInterval = null;
+        }
+        if (frameId) {
+            cancelAnimationFrame(frameId);
+            frameId = null;
+        }
+        
+        setControlsEnabled(false);
+        
+        if (win) {
+            message.textContent = '🎉 Поздравляем! Все щуки пойманы!';
+            blueSquare.className = 'blue-square show';
+            raceCompleted = true;
+        } else {
+            attempts--;
+            attemptDisplay.textContent = attempts;
+            blueSquare.className = 'blue-square';
+            if (attempts <= 0) {
+                message.textContent = '😢 Игра окончена! Попытки закончились.';
+            } else {
+                message.textContent = '⏰ Время вышло! Осталось попыток: ' + attempts;
+                setTimeout(function() {
+                    if (!raceCompleted && attempts > 0) {
+                        resetGame();
+                        startGame();
+                    }
+                }, 1500);
+            }
+        }
+    }
+
+    function resetGame() {
+        for (var i = 0; i < fishList.length; i++) {
+            if (fishList[i].parentNode) {
+                fishList[i].remove();
+            }
+        }
+        fishList = [];
+        isGameOver = false;
+        timer = 0;
+        fishSpawned = 0;
+        caughtFish = 0;
+        timerDisplay.textContent = '0:00';
+        fishCounter.textContent = '🐟 0/' + MAX_FISH;
+        fishCountDisplay.textContent = '0/' + MAX_FISH;
+        currentLane = 1;
+        updateEmelyaPosition();
+        blueSquare.className = 'blue-square';
+        if (attempts > 0 && !raceCompleted) {
+            message.textContent = 'Нажмите "Ловить"';
+        }
+        setControlsEnabled(false);
+        startBtn.disabled = false;
+    }
+
+    function startGame() {
+        if (isGameOver || raceCompleted || attempts <= 0) return;
+        
+        resetGame();
+        gameRunning = true;
+        isGameOver = false;
+        setControlsEnabled(true);
+        startBtn.disabled = true;
+        
+        message.textContent = '🐟 Ловите щук! Нажимайте на них!';
+        blueSquare.className = 'blue-square';
+        
+        timer = 0;
+        timerInterval = setInterval(function() {
+            timer++;
+            timerDisplay.textContent = formatTime(timer);
+            if (timer >= GAME_TIME) {
+                gameOver(false);
+            }
+        }, 1000);
+        
+        setTimeout(function() {
+            if (gameRunning && !isGameOver) {
+                spawnFish();
+                fishInterval = setInterval(function() {
+                    if (gameRunning && !isGameOver) {
+                        spawnFish();
+                    }
+                }, FISH_SPAWN_INTERVAL);
+            }
+        }, 1000);
+    }
+
+    // === КНОПКИ ===
+    moveLeftBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (!gameRunning || isGameOver) return;
+        if (currentLane > 0) {
+            currentLane--;
+            updateEmelyaPosition();
+        }
+    });
+
+    moveRightBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (!gameRunning || isGameOver) return;
+        if (currentLane < 2) {
+            currentLane++;
+            updateEmelyaPosition();
+        }
+    });
+
+    // === СВАЙПЫ ===
+    var touchStartX = 0;
+    swipeZone.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    swipeZone.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        if (!gameRunning || isGameOver) return;
+        var touchEndX = e.touches[0].clientX;
+        var diff = touchStartX - touchEndX;
+        if (diff > 30 && currentLane < 2) {
+            currentLane++;
+            updateEmelyaPosition();
+            touchStartX = touchEndX;
+        } else if (diff < -30 && currentLane > 0) {
+            currentLane--;
+            updateEmelyaPosition();
+            touchStartX = touchEndX;
+        }
+    }, { passive: false });
+
+    // === КЛАВИАТУРА ===
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            e.preventDefault();
+            if (!moveLeftBtn.disabled) moveLeftBtn.click();
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            e.preventDefault();
+            if (!moveRightBtn.disabled) moveRightBtn.click();
+        } else if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            if (!startBtn.disabled) startBtn.click();
+        }
+    });
+
+    startBtn.addEventListener('click', startGame);
+    
+    restartBtn.addEventListener('click', function() {
+        attempts = MAX_ATTEMPTS;
+        raceCompleted = false;
+        attemptDisplay.textContent = attempts;
+        resetGame();
+        message.textContent = 'Нажмите "Ловить"';
+        startBtn.disabled = false;
+        blueSquare.className = 'blue-square';
+    });
+
+    // Инициализация
+    updateEmelyaPosition();
+
+    // === QR КОД ===
+    var qrBtn = document.getElementById('qrBtn');
+    var qrModal = document.getElementById('qrModal');
+    var qrCloseBtn = document.getElementById('qrCloseBtn');
+    var qrUrl = document.getElementById('qrUrl');
+    var qrUrlInput = document.getElementById('qrUrlInput');
+    var qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    var qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        var url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        var currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        var url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+})();
+</script>
+</body>
+</html>
