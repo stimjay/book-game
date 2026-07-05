@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Звукорежиссёр 🎚️</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 10px;
+            color: #ddd;
+        }
+        .game-wrapper {
+            background: linear-gradient(145deg, #1a1a2a, #0a0a1a);
+            padding: 20px;
+            border-radius: 30px;
+            border: 2px solid #4a4a6a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            max-width: 750px;
+            width: 100%;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .title { color: #f1c40f; font-size: 24px; font-family: 'Comic Sans MS', cursive; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .qr-btn { background: #2980b9; border: none; color: white; padding: 6px 18px; border-radius: 30px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #1a5276; transition: 0.15s; }
+        .qr-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .file-upload-area {
+            background: rgba(0,0,0,0.3);
+            border: 2px dashed #4a4a6a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            transition: 0.3s;
+        }
+        .file-upload-area.has-file { border-color: #2ecc71; background: rgba(46,204,113,0.1); }
+        .file-upload-area label {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #2980b9;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .file-upload-area label:hover { background: #3498db; }
+        .file-upload-area input { display: none; }
+        .file-upload-area .file-name { margin-top: 6px; font-size: 14px; color: #aaa; }
+
+        .visualization {
+            background: #0a0a1a;
+            border-radius: 16px;
+            padding: 12px;
+            border: 2px solid #3a3a5a;
+            margin-bottom: 12px;
+            position: relative;
+            height: 140px;
+            overflow: hidden;
+        }
+        canvas { display: block; width: 100%; height: 100%; background: #0a0a1a; border-radius: 8px; }
+        .visualization-label {
+            position: absolute;
+            bottom: 8px;
+            right: 16px;
+            color: rgba(255,255,255,0.15);
+            font-size: 12px;
+            font-family: monospace;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+
+        .controls-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .control-group {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 10px 14px;
+            border: 1px solid #3a3a5a;
+        }
+        .control-group label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        .control-group .value-display {
+            float: right;
+            color: #f1c40f;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, #3a3a5a, #5a5a7a);
+            border-radius: 4px;
+            outline: none;
+            transition: background 0.2s;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #f1c40f;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(241,196,15,0.4);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #f1c40f;
+            cursor: pointer;
+            border: none;
+        }
+
+        .question-area {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border: 1px dashed #5a5a7a;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 18px;
+            transition: all 0.5s;
+        }
+        .question-area .hidden-text {
+            color: rgba(255,255,255,0.08);
+            font-family: monospace;
+            letter-spacing: 2px;
+            font-size: 16px;
+        }
+        .question-area .revealed-text {
+            color: #f1c40f;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 0 0 20px rgba(241,196,15,0.3);
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes glow { 0% { text-shadow: 0 0 10px rgba(241,196,15,0.2); } 100% { text-shadow: 0 0 30px rgba(241,196,15,0.6); } }
+
+        .answer-area {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .answer-area input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 2px solid #4a4a6a;
+            background: #1a1a2a;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .answer-area input:focus { border-color: #f1c40f; background: #2a2a3a; }
+        .answer-area input:disabled { opacity: 0.3; }
+
+        .btn {
+            background: linear-gradient(180deg, #3a3a5a, #2a2a4a);
+            border: none;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a1a2a;
+            border: 1px solid #5a5a7a;
+            transition: 0.08s;
+            touch-action: manipulation;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #1a1a2a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #1a1a2a; }
+        .btn.primary { background: linear-gradient(180deg, #27ae60, #1e8449); box-shadow: 0 4px 0 #145a32; border-color: #2ecc71; }
+        .btn.success { background: linear-gradient(180deg, #2980b9, #1a5276); box-shadow: 0 4px 0 #0e3a5a; border-color: #3498db; }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid #4a4a6a;
+            margin-bottom: 10px;
+            color: #aaa;
+            font-weight: bold;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .status-bar .value { color: #f1c40f; }
+        .status-bar .match-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .status-bar .match-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+            transition: background 0.3s;
+        }
+        .status-bar .match-dot.ok { background: #2ecc71; }
+
+        .result {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 16px;
+            color: #f1c40f;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid #4a4a6a;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .orange-square {
+            background: #e67e22;
+            color: white;
+            padding: 4px 14px;
+            border-radius: 6px;
+            font-size: 26px;
+            font-weight: 700;
+            box-shadow: 0 3px 0 #b85a0a;
+            min-width: 44px;
+            text-align: center;
+            display: none;
+            transition: 0.3s;
+        }
+        .orange-square.show { display: inline-block; animation: squareAppear 0.5s ease-out; }
+        @keyframes squareAppear { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        .hint { font-size: 13px; color: rgba(255,255,255,0.3); text-align: center; margin-top: 6px; font-style: italic; }
+
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .btn-group .btn { flex: 1; min-width: 100px; }
+
+        .qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content { background: white; padding: 25px 30px 30px; border-radius: 25px; text-align: center; max-width: 400px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); max-height: 92vh; overflow-y: auto; }
+        .qr-modal-content h2 { color: #2d2117; font-size: 20px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 12px; font-size: 13px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box { background: #f5f5f5; padding: 8px 10px; border-radius: 8px; margin: 10px 0; word-break: break-all; font-size: 12px; color: #555; border: 1px solid #ddd; text-align: left; font-family: monospace; max-height: 50px; overflow-y: auto; }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #ddd; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-input-group button:hover { background: #2ecc71; }
+        .qr-close-btn { background: #e74c3c; border: none; color: white; padding: 10px 30px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 #c0392b; margin-top: 8px; width: 100%; }
+        .qr-close-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #c0392b; }
+        .qr-close-btn:hover { background: #c0392b; }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #f8f8f8; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 600px) {
+            .controls-panel { grid-template-columns: 1fr; }
+            .title { font-size: 20px; }
+            .btn { padding: 8px 16px; font-size: 14px; }
+            .qr-modal-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="header">
+        <div class="title"><span class="bounce">🎚️</span> Звукорежиссёр</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="file-upload-area" id="fileUploadArea">
+        <label for="audioFile">📁 Загрузить свою музыку (опционально)</label>
+        <input type="file" id="audioFile" accept="audio/*">
+        <div class="file-name" id="fileName">Используется встроенная мелодия</div>
+    </div>
+
+    <div class="status-bar">
+        <span>🎛️ <span class="value" id="statusDisplay">Готов</span></span>
+        <span class="match-indicator">
+            Совпадение: <span class="match-dot" id="matchDot"></span>
+            <span class="value" id="matchPercent">0%</span>
+        </span>
+    </div>
+
+    <div class="visualization">
+        <canvas id="waveCanvas" width="700" height="120"></canvas>
+        <span class="visualization-label">🎵 ОСЦИЛЛОГРАФ</span>
+    </div>
+
+    <div class="controls-panel">
+        <div class="control-group">
+            <label>Громкость <span class="value-display" id="volDisplay">50%</span></label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+        </div>
+        <div class="control-group">
+            <label>Бас <span class="value-display" id="bassDisplay">50%</span></label>
+            <input type="range" id="bassSlider" min="0" max="100" value="50">
+        </div>
+        <div class="control-group">
+            <label>Средние <span class="value-display" id="midDisplay">50%</span></label>
+            <input type="range" id="midSlider" min="0" max="100" value="50">
+        </div>
+        <div class="control-group">
+            <label>Высокие <span class="value-display" id="highDisplay">50%</span></label>
+            <input type="range" id="highSlider" min="0" max="100" value="50">
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn primary" id="startBtn">🎧 Запустить</button>
+        <button class="btn" id="resetBtn">🔄 Сброс</button>
+    </div>
+
+    <div class="question-area" id="questionArea">
+        <span class="hidden-text" id="hiddenQuestion">❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚❚</span>
+        <span class="revealed-text" id="revealedQuestion" style="display:none;"></span>
+    </div>
+
+    <div class="answer-area">
+        <input type="text" id="answerInput" placeholder="Введите ответ..." disabled>
+        <button class="btn success" id="checkBtn" disabled>✅ Проверить</button>
+    </div>
+
+    <div class="result">
+        <span id="message">Настройте звук для 97% совпадения</span>
+        <span class="orange-square" id="orangeSquare">6</span>
+    </div>
+    <div class="hint" id="hintText">💡 Двигайте ползунки до 97%, чтобы услышать музыку и увидеть вопрос</div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ====== ЭЛЕМЕНТЫ ======
+    const waveCanvas = document.getElementById('waveCanvas');
+    const wCtx = waveCanvas.getContext('2d');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const bassSlider = document.getElementById('bassSlider');
+    const midSlider = document.getElementById('midSlider');
+    const highSlider = document.getElementById('highSlider');
+    const volDisplay = document.getElementById('volDisplay');
+    const bassDisplay = document.getElementById('bassDisplay');
+    const midDisplay = document.getElementById('midDisplay');
+    const highDisplay = document.getElementById('highDisplay');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const matchDot = document.getElementById('matchDot');
+    const matchPercent = document.getElementById('matchPercent');
+    const message = document.getElementById('message');
+    const orangeSquare = document.getElementById('orangeSquare');
+    const hiddenQuestion = document.getElementById('hiddenQuestion');
+    const revealedQuestion = document.getElementById('revealedQuestion');
+    const answerInput = document.getElementById('answerInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const audioFileInput = document.getElementById('audioFile');
+    const fileNameDisplay = document.getElementById('fileName');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+
+    // ====== ПРЕДЫДУЩИЙ ВОПРОС ======
+    const SECRET_QUESTION = 'Профессор из этого произведения умеет превращаться в полосатую кошку';
+    const CORRECT_ANSWERS = ['гарри поттер', 'гари поттер', 'гарри поттер и философский камень', 'поттер', 'гарри'];
+
+    // ====== ЦЕЛЕВЫЕ ЗНАЧЕНИЯ ======
+    const TARGET = { volume: 70, bass: 40, mid: 60, high: 30 };
+    const THRESHOLD = 97;
+
+    let current = { volume: 50, bass: 50, mid: 50, high: 50 };
+    let isDecoded = false;
+    let isWon = false;
+    let isPlaying = false;
+
+    // ====== АУДИО ======
+    let audioCtx = null;
+    let sourceNode = null;
+    let gainNode = null;
+    let analyser = null;
+    let dataArray = null;
+    let animationId = null;
+    let isUserAudioLoaded = false;
+    let audioBuffer = null;
+
+    // ====== ВСТРОЕННАЯ МЕЛОДИЯ ======
+    function createBuiltinMelody() {
+        if (!audioCtx) return null;
+        const sampleRate = audioCtx.sampleRate;
+        const duration = 8;
+        const bufferSize = sampleRate * duration;
+        const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+        const data = buffer.getChannelData(0);
+        const notes = [
+            329.63, 329.63, 349.23, 392.00, 392.00, 349.23, 329.63, 293.66,
+            261.63, 261.63, 293.66, 329.63, 293.66, 293.66, 261.63, 261.63,
+            329.63, 329.63, 349.23, 392.00, 392.00, 349.23, 329.63, 293.66,
+            261.63, 261.63, 293.66, 329.63, 293.66, 261.63, 261.63, 261.63
+        ];
+        const noteDuration = 0.25;
+        const samplesPerNote = sampleRate * noteDuration;
+        for (let i = 0; i < notes.length; i++) {
+            const freq = notes[i];
+            const startSample = i * samplesPerNote;
+            const endSample = Math.min(startSample + samplesPerNote, bufferSize);
+            for (let j = startSample; j < endSample; j++) {
+                const t = (j - startSample) / samplesPerNote;
+                const envelope = Math.sin(t * Math.PI) * 0.5;
+                data[j] = Math.sin(2 * Math.PI * freq * t) * envelope;
+            }
+        }
+        return buffer;
+    }
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        let buffer = null;
+        if (isUserAudioLoaded && audioBuffer) {
+            buffer = audioBuffer;
+            fileNameDisplay.textContent = '📂 Используется загруженная музыка';
+        } else {
+            buffer = createBuiltinMelody();
+            if (!buffer) {
+                message.textContent = '⚠️ Ошибка создания встроенной мелодии';
+                return false;
+            }
+            fileNameDisplay.textContent = '🎵 Встроенная мелодия (Бетховен)';
+        }
+
+        sourceNode = audioCtx.createBufferSource();
+        sourceNode.buffer = buffer;
+        sourceNode.loop = true;
+
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.8;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        sourceNode.connect(gainNode);
+        gainNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        sourceNode.start();
+        isPlaying = true;
+        startBtn.textContent = '⏹ Остановить';
+        statusDisplay.textContent = 'Играет музыка...';
+        drawWave();
+        return true;
+    }
+
+    function updateGain(matchPercentValue) {
+        if (!gainNode) return;
+        let vol = 0;
+        if (matchPercentValue > 80) {
+            vol = (matchPercentValue - 80) / 20;
+        }
+        gainNode.gain.setTargetAtTime(vol * 0.8, audioCtx.currentTime, 0.1);
+    }
+
+    function drawWave() {
+        if (!isPlaying || !analyser) {
+            wCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+            wCtx.fillStyle = '#0a0a1a';
+            wCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+            wCtx.font = '16px monospace';
+            wCtx.fillStyle = 'rgba(255,255,255,0.1)';
+            wCtx.textAlign = 'center';
+            wCtx.textBaseline = 'middle';
+            wCtx.fillText('Нажмите "Запустить"', waveCanvas.width/2, waveCanvas.height/2);
+            return;
+        }
+        analyser.getByteTimeDomainData(dataArray);
+        wCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        wCtx.fillStyle = '#0a0a1a';
+        wCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+
+        wCtx.beginPath();
+        wCtx.strokeStyle = '#2ecc71';
+        wCtx.lineWidth = 2;
+        const step = Math.floor(dataArray.length / waveCanvas.width);
+        for (let i = 0; i < waveCanvas.width; i++) {
+            const idx = i * step;
+            const val = (dataArray[idx] / 128) - 1;
+            const y = (val * 0.8 + 1) * waveCanvas.height / 2;
+            if (i === 0) wCtx.moveTo(i, y);
+            else wCtx.lineTo(i, y);
+        }
+        wCtx.stroke();
+
+        if (isDecoded) {
+            wCtx.save();
+            wCtx.font = 'bold 14px monospace';
+            wCtx.fillStyle = 'rgba(241,196,15,0.2)';
+            wCtx.textAlign = 'center';
+            wCtx.textBaseline = 'middle';
+            wCtx.fillText('🎵 Музыка', waveCanvas.width/2, 20);
+            wCtx.restore();
+        }
+
+        requestAnimationFrame(drawWave);
+    }
+
+    function checkMatch() {
+        const volDiff = Math.abs(current.volume - TARGET.volume);
+        const bassDiff = Math.abs(current.bass - TARGET.bass);
+        const midDiff = Math.abs(current.mid - TARGET.mid);
+        const highDiff = Math.abs(current.high - TARGET.high);
+        const totalDiff = volDiff + bassDiff + midDiff + highDiff;
+        const maxDiff = 4 * 100;
+        const match = 100 - (totalDiff / maxDiff * 100);
+        const matchPercentValue = Math.max(0, Math.min(100, match));
+        matchPercent.textContent = Math.round(matchPercentValue) + '%';
+        updateGain(matchPercentValue);
+
+        const isEnough = matchPercentValue >= THRESHOLD;
+
+        if (isEnough && !isDecoded && !isWon) {
+            matchDot.className = 'match-dot ok';
+            statusDisplay.textContent = '🎶 Достаточно!';
+            decodeQuestion();
+        } else if (isDecoded) {
+            matchDot.className = 'match-dot ok';
+        } else {
+            matchDot.className = 'match-dot';
+        }
+        return isEnough;
+    }
+
+    function decodeQuestion() {
+        if (isDecoded) return;
+        isDecoded = true;
+        hiddenQuestion.style.display = 'none';
+        revealedQuestion.style.display = 'inline';
+        revealedQuestion.textContent = '❓ ' + SECRET_QUESTION;
+        message.textContent = '🔍 Вопрос проявился! Введите ответ.';
+        answerInput.disabled = false;
+        checkBtn.disabled = false;
+        statusDisplay.textContent = '🎵 Расшифровано!';
+    }
+
+    function updateFromSliders() {
+        current.volume = parseInt(volumeSlider.value);
+        current.bass = parseInt(bassSlider.value);
+        current.mid = parseInt(midSlider.value);
+        current.high = parseInt(highSlider.value);
+        volDisplay.textContent = current.volume + '%';
+        bassDisplay.textContent = current.bass + '%';
+        midDisplay.textContent = current.mid + '%';
+        highDisplay.textContent = current.high + '%';
+        checkMatch();
+    }
+
+    function resetGame() {
+        if (sourceNode) {
+            sourceNode.stop();
+            sourceNode = null;
+        }
+        if (gainNode) {
+            gainNode.disconnect();
+            gainNode = null;
+        }
+        if (analyser) {
+            analyser.disconnect();
+            analyser = null;
+        }
+        isPlaying = false;
+        isDecoded = false;
+        isWon = false;
+        orangeSquare.classList.remove('show');
+        hiddenQuestion.style.display = 'inline';
+        revealedQuestion.style.display = 'none';
+        answerInput.disabled = true;
+        checkBtn.disabled = true;
+        answerInput.value = '';
+        message.textContent = 'Настройте звук для 97% совпадения';
+        statusDisplay.textContent = 'Готов';
+        matchDot.className = 'match-dot';
+        matchPercent.textContent = '0%';
+        volumeSlider.value = 50;
+        bassSlider.value = 50;
+        midSlider.value = 50;
+        highSlider.value = 50;
+        current.volume = 50;
+        current.bass = 50;
+        current.mid = 50;
+        current.high = 50;
+        volDisplay.textContent = '50%';
+        bassDisplay.textContent = '50%';
+        midDisplay.textContent = '50%';
+        highDisplay.textContent = '50%';
+        if (animationId) cancelAnimationFrame(animationId);
+        wCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        wCtx.fillStyle = '#0a0a1a';
+        wCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+        wCtx.font = '16px monospace';
+        wCtx.fillStyle = 'rgba(255,255,255,0.1)';
+        wCtx.textAlign = 'center';
+        wCtx.textBaseline = 'middle';
+        wCtx.fillText('Нажмите "Запустить"', waveCanvas.width/2, waveCanvas.height/2);
+        startBtn.textContent = '🎧 Запустить';
+        startBtn.disabled = false;
+    }
+
+    function startGame() {
+        if (isPlaying) {
+            resetGame();
+            startBtn.textContent = '🎧 Запустить';
+            return;
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        const ok = initAudio();
+        if (!ok) return;
+        statusDisplay.textContent = 'Настройте звук...';
+        message.textContent = 'Двигайте ползунки до 97% совпадения';
+        drawWave();
+    }
+
+    function checkAnswer() {
+        if (isWon) return;
+        const userAnswer = answerInput.value.trim().toLowerCase();
+        if (!userAnswer) {
+            message.textContent = '✏️ Введите ответ!';
+            return;
+        }
+        const isCorrect = CORRECT_ANSWERS.some(a => userAnswer.includes(a) || a.includes(userAnswer));
+        if (isCorrect) {
+            isWon = true;
+            orangeSquare.classList.add('show');
+            message.textContent = '🎉 Поздравляем! Правильный ответ! Вы получили цифру 6!';
+            statusDisplay.textContent = '🏆 Победа!';
+            answerInput.disabled = true;
+            checkBtn.disabled = true;
+        } else {
+            message.textContent = '❌ Неправильно. Попробуйте ещё раз!';
+            answerInput.value = '';
+            answerInput.focus();
+        }
+    }
+
+    // ====== ОБРАБОТЧИКИ ======
+    volumeSlider.addEventListener('input', updateFromSliders);
+    bassSlider.addEventListener('input', updateFromSliders);
+    midSlider.addEventListener('input', updateFromSliders);
+    highSlider.addEventListener('input', updateFromSliders);
+
+    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', function() {
+        resetGame();
+        startBtn.textContent = '🎧 Запустить';
+    });
+
+    checkBtn.addEventListener('click', checkAnswer);
+    answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') checkAnswer();
+    });
+
+    // Загрузка своего файла
+    audioFileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        fileNameDisplay.textContent = '📂 ' + file.name;
+        fileUploadArea.classList.add('has-file');
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            audioCtx.decodeAudioData(arrayBuffer, function(buffer) {
+                audioBuffer = buffer;
+                isUserAudioLoaded = true;
+                message.textContent = '✅ Музыка загружена! Нажмите "Запустить"';
+                statusDisplay.textContent = 'Музыка готова';
+                if (isPlaying) {
+                    resetGame();
+                    startGame();
+                }
+            }, function(e) {
+                alert('Не удалось декодировать аудиофайл. Попробуйте другой формат (MP3 или WAV).');
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // ====== QR ======
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, { text: text, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // ====== СТАРТ ======
+    resetGame();
+})();
+</script>
+</body>
+</html>
