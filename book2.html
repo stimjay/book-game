@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Книжная головоломка 📚</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5efe6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .game-container {
+            background: #d9c8b2;
+            padding: 30px 40px 50px;
+            border-radius: 30px 30px 20px 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3), inset 0 -5px 0 #b8a08a;
+            border-bottom: 8px solid #8b7a68;
+            max-width: 1100px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            font-weight: 400;
+            color: #4a3728;
+            letter-spacing: 2px;
+            font-size: 28px;
+            margin-top: -10px;
+            margin-bottom: 25px;
+            text-shadow: 1px 1px 0 rgba(255,255,200,0.3);
+        }
+        .shelves {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            background: #b8a08a;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: inset 0 8px 12px rgba(0,0,0,0.2);
+        }
+        @media (max-width: 900px) {
+            .shelves { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 700px) {
+            .shelves { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 450px) {
+            .shelves { grid-template-columns: 1fr; }
+        }
+        .shelf {
+            background: #7c6b5a;
+            padding: 6px 12px;
+            border-radius: 8px 8px 0 0;
+            box-shadow: inset 0 -4px 0 #5a4c3f, 0 4px 8px rgba(0,0,0,0.2);
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-top: 20px;
+        }
+        .shelf.empty-shelf {
+            background: #8b7a68;
+            border: 2px dashed #5a4c3f;
+            border-top: none;
+            box-shadow: inset 0 -4px 0 #5a4c3f, 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .shelf-label {
+            position: absolute;
+            top: -14px;
+            left: 10px;
+            font-size: 13px;
+            color: #f0e3d0;
+            background: #4a3728;
+            padding: 0 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+        .books-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 90px;
+            padding: 6px 0;
+        }
+        .book {
+            padding: 8px 12px;
+            border-radius: 4px 10px 2px 2px;
+            color: #fcf3e6;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: grab;
+            box-shadow: 3px 4px 0 rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+            border-left: 4px solid #e67e22;
+            border-right: 2px solid rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+            text-align: center;
+            flex: 0 0 auto;
+            min-width: 65px;
+            transform: rotate(0.5deg);
+        }
+        .book:active {
+            cursor: grabbing;
+            transform: scale(0.96);
+            opacity: 0.8;
+        }
+        .book.dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+        .shelf.drag-over {
+            background: #9b8a78;
+            box-shadow: inset 0 0 0 3px #f1c40f, 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .empty-shelf .books-container {
+            min-height: 90px;
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 8px;
+        }
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            background: #f0e3d0;
+            padding: 12px 25px;
+            border-radius: 60px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #4a3728;
+            border: none;
+            color: #f0e3d0;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 4px 0 #2d2117;
+            letter-spacing: 1px;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #2d2117; }
+        .btn:hover { background: #5f4a38; }
+        .btn.check {
+            background: #27ae60;
+            box-shadow: 0 4px 0 #1e8449;
+        }
+        .btn.check:hover { background: #2ecc71; }
+        .btn.check:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1e8449;
+        }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 4px 0 #1a5276;
+            letter-spacing: 1px;
+        }
+        .qr-btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+        .status-box {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d2117;
+            flex-wrap: wrap;
+        }
+        .green-square {
+            background: #2e7d32;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 32px;
+            font-weight: 700;
+            box-shadow: 0 4px 0 #1b5e20, 0 6px 12px rgba(0,0,0,0.2);
+            min-width: 60px;
+            text-align: center;
+            display: none;
+            transition: all 0.3s;
+        }
+        .green-square.show {
+            display: inline-block;
+            animation: squareAppear 0.5s ease-out;
+        }
+        @keyframes squareAppear {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .message {
+            font-size: 18px;
+            background: #fdfae8;
+            padding: 5px 20px;
+            border-radius: 30px;
+            border-left: 6px solid #f39c12;
+        }
+        .attempts {
+            font-size: 20px;
+            color: #2d2117;
+            background: #fdfae8;
+            padding: 5px 18px;
+            border-radius: 30px;
+            border-left: 6px solid #e67e22;
+        }
+        .attempts .num {
+            font-weight: bold;
+            color: #d35400;
+        }
+
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content {
+            background: white;
+            padding: 35px 40px 40px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 460px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            max-height: 92vh;
+            overflow-y: auto;
+        }
+        .qr-modal-content h2 { color: #2d2117; margin-bottom: 5px; font-size: 24px; }
+        .qr-modal-content .subtitle { color: #666; margin-bottom: 15px; font-size: 14px; }
+        #qrcode { display: inline-block; background: white; padding: 15px; border-radius: 10px; margin: 5px auto; border: 2px solid #ddd; }
+        .qr-url-box {
+            background: #f5f5f5;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin: 12px 0;
+            word-break: break-all;
+            font-size: 13px;
+            color: #555;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-family: monospace;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        .qr-url-label { font-size: 13px; color: #888; margin-bottom: 4px; text-align: left; }
+        .qr-input-group {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .qr-input-group input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        .qr-input-group input:focus { border-color: #2980b9; outline: none; }
+        .qr-input-group button {
+            background: #27ae60;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .qr-input-group button:hover { background: #2ecc71; }
+        .qr-close-btn {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            padding: 12px 40px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 4px 0 #c0392b;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .qr-close-btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #c0392b; }
+        .qr-close-btn:hover { background: #c0392b; }
+        .qr-help {
+            font-size: 13px;
+            color: #999;
+            margin-top: 8px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+            text-align: left;
+        }
+        @media (max-width: 700px) {
+            .game-container { padding: 20px; }
+            .book { font-size: 12px; padding: 6px 10px; min-width: 55px; }
+            .shelf { min-height: 100px; }
+            .info-panel { flex-wrap: wrap; gap: 12px; justify-content: center; }
+            .qr-modal-content { padding: 25px; }
+            .qr-input-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h1>📚 Книжная головоломка</h1>
+
+    <div class="shelves" id="shelvesContainer">
+        <!-- Полки будут добавлены скриптом -->
+    </div>
+
+    <div class="info-panel">
+        <div class="btn-group">
+            <button class="btn" id="resetBtn">⟳ Начать сначала</button>
+            <button class="btn check" id="checkBtn">✅ Проверить</button>
+            <button class="qr-btn" id="qrBtn">📱 QR-код</button>
+        </div>
+        <div class="status-box">
+            <span class="message" id="statusMessage">Расставьте книги, затем нажмите «Проверить»</span>
+            <span class="attempts">❤️ Попытки: <span class="num" id="attemptsDisplay">3</span></span>
+            <div class="green-square" id="greenSquare">3</div>
+        </div>
+    </div>
+</div>
+
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код для игры</h2>
+        <p class="subtitle">Отсканируйте, чтобы открыть игру на другом устройстве</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка для открытия:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку на игру...">
+            <button id="qrUpdateBtn">Обновить QR</button>
+        </div>
+        <div class="qr-help">
+            💡 <strong>Как поделиться:</strong><br>
+            1. Загрузите HTML-файл на хостинг (GitHub Pages, Netlify)<br>
+            2. Вставьте ссылку в поле выше<br>
+            3. Нажмите "Обновить QR"<br>
+            4. Отсканируйте QR-код с телефона
+        </div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ===== 8 троек = 24 книги + пустая полка = всего 9 полок =====
+    const BOOKS_DATA = [
+        { id: 'b1', text: 'А.С. Пушкин', type: 'author' },
+        { id: 'b2', text: 'Евгений Онегин', type: 'title' },
+        { id: 'b3', text: 'Татьяна Ларина', type: 'hero' },
+        { id: 'b4', text: 'Л.Н. Толстой', type: 'author' },
+        { id: 'b5', text: 'Война и мир', type: 'title' },
+        { id: 'b6', text: 'Наташа Ростова', type: 'hero' },
+        { id: 'b7', text: 'Ф.М. Достоевский', type: 'author' },
+        { id: 'b8', text: 'Преступление и наказание', type: 'title' },
+        { id: 'b9', text: 'Родион Раскольников', type: 'hero' },
+        { id: 'b10', text: 'М.А. Булгаков', type: 'author' },
+        { id: 'b11', text: 'Мастер и Маргарита', type: 'title' },
+        { id: 'b12', text: 'Воланд', type: 'hero' },
+        { id: 'b13', text: 'И.С. Тургенев', type: 'author' },
+        { id: 'b14', text: 'Отцы и дети', type: 'title' },
+        { id: 'b15', text: 'Базаров', type: 'hero' },
+        { id: 'b16', text: 'Н.В. Гоголь', type: 'author' },
+        { id: 'b17', text: 'Мертвые души', type: 'title' },
+        { id: 'b18', text: 'Чичиков', type: 'hero' },
+        { id: 'b19', text: 'А.П. Чехов', type: 'author' },
+        { id: 'b20', text: 'Вишневый сад', type: 'title' },
+        { id: 'b21', text: 'Раневская', type: 'hero' },
+        { id: 'b22', text: 'М.Ю. Лермонтов', type: 'author' },
+        { id: 'b23', text: 'Герой нашего времени', type: 'title' },
+        { id: 'b24', text: 'Печорин', type: 'hero' }
+    ];
+
+    const SHELF_COUNT = 9;          // 8 полок с книгами + 1 пустая
+    const BOOKS_PER_SHELF = 3;
+    const TOTAL_BOOKS = BOOKS_DATA.length; // 24
+    const EMPTY_SHELF_INDEX = 8;    // индекс пустой полки (0-8)
+
+    let shelves = [];
+    const shelfElements = [];
+    const bookMap = {};
+    BOOKS_DATA.forEach(b => bookMap[b.id] = b);
+
+    const greenSquare = document.getElementById('greenSquare');
+    const statusMessage = document.getElementById('statusMessage');
+    const attemptsDisplay = document.getElementById('attemptsDisplay');
+    const resetBtn = document.getElementById('resetBtn');
+    const checkBtn = document.getElementById('checkBtn');
+    const shelvesContainer = document.getElementById('shelvesContainer');
+
+    let draggedBookId = null;
+    let draggedFromShelf = null;
+
+    let attempts = 3;
+    let gameCompleted = false; // если победа, блокируем перемещения и кнопку проверки
+
+    // ===== ИНИЦИАЛИЗАЦИЯ =====
+    function initGame() {
+        // Перемешиваем все книги
+        const shuffled = [...BOOKS_DATA].sort(() => Math.random() - 0.5);
+        shelves = [];
+        for (let i = 0; i < SHELF_COUNT; i++) {
+            shelves[i] = [];
+        }
+        // Раскладываем по 3 книги на первые 8 полок
+        let idx = 0;
+        for (let s = 0; s < SHELF_COUNT - 1; s++) {
+            for (let j = 0; j < BOOKS_PER_SHELF; j++) {
+                shelves[s].push(shuffled[idx].id);
+                idx++;
+            }
+        }
+        // 9-я полка (индекс 8) остаётся пустой
+        shelves[EMPTY_SHELF_INDEX] = [];
+
+        attempts = 3;
+        gameCompleted = false;
+        attemptsDisplay.textContent = attempts;
+        greenSquare.className = 'green-square';
+        statusMessage.textContent = '📚 Расставьте книги, затем нажмите «Проверить»';
+        checkBtn.disabled = false;
+        render();
+        // не вызываем checkWinCondition автоматически
+    }
+
+    // ===== ОТРИСОВКА =====
+    function render() {
+        shelvesContainer.innerHTML = '';
+        for (let s = 0; s < SHELF_COUNT; s++) {
+            const shelfDiv = document.createElement('div');
+            shelfDiv.className = 'shelf';
+            if (s === EMPTY_SHELF_INDEX) {
+                shelfDiv.classList.add('empty-shelf');
+            }
+            shelfDiv.dataset.shelf = s;
+
+            const label = document.createElement('span');
+            label.className = 'shelf-label';
+            label.textContent = s === EMPTY_SHELF_INDEX ? '⬜ Пустая полка' : `📖 Полка ${s+1}`;
+            shelfDiv.appendChild(label);
+
+            const booksDiv = document.createElement('div');
+            booksDiv.className = 'books-container';
+            const bookIds = shelves[s];
+            bookIds.forEach(id => {
+                const bookData = bookMap[id];
+                if (!bookData) return;
+                const bookEl = document.createElement('div');
+                bookEl.className = 'book';
+                bookEl.textContent = bookData.text;
+                bookEl.dataset.bookId = id;
+                bookEl.dataset.shelf = s;
+                // Случайный цвет
+                const hue = Math.floor(Math.random() * 360);
+                const sat = 60 + Math.floor(Math.random() * 30);
+                const lig = 35 + Math.floor(Math.random() * 30);
+                bookEl.style.backgroundColor = `hsl(${hue}, ${sat}%, ${lig}%)`;
+                bookEl.style.borderLeftColor = `hsl(${hue}, 80%, 50%)`;
+                bookEl.style.boxShadow = `3px 4px 0 hsla(${hue}, 50%, 20%, 0.5)`;
+                // События
+                bookEl.draggable = true;
+                bookEl.addEventListener('dragstart', handleDragStart);
+                bookEl.addEventListener('dragend', handleDragEnd);
+                bookEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+                bookEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+                bookEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+                booksDiv.appendChild(bookEl);
+            });
+            shelfDiv.appendChild(booksDiv);
+            shelvesContainer.appendChild(shelfDiv);
+            shelfElements[s] = shelfDiv;
+
+            // События для drop
+            shelfDiv.addEventListener('dragover', handleDragOver);
+            shelfDiv.addEventListener('dragenter', handleDragEnter);
+            shelfDiv.addEventListener('dragleave', handleDragLeave);
+            shelfDiv.addEventListener('drop', handleDrop);
+        }
+    }
+
+    // ===== DRAG & DROP =====
+    function handleDragStart(e) {
+        if (gameCompleted) return; // если игра завершена, не даём тащить
+        const bookEl = e.target.closest('.book');
+        if (!bookEl) return;
+        draggedBookId = bookEl.dataset.bookId;
+        draggedFromShelf = parseInt(bookEl.dataset.shelf);
+        e.dataTransfer.setData('text/plain', draggedBookId);
+        bookEl.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd(e) {
+        const bookEl = e.target.closest('.book');
+        if (bookEl) bookEl.classList.remove('dragging');
+        document.querySelectorAll('.shelf').forEach(el => el.classList.remove('drag-over'));
+        draggedBookId = null;
+        draggedFromShelf = null;
+    }
+
+    function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+    function handleDragEnter(e) { e.preventDefault(); const shelf = e.target.closest('.shelf'); if (shelf) shelf.classList.add('drag-over'); }
+    function handleDragLeave(e) { const shelf = e.target.closest('.shelf'); if (shelf) shelf.classList.remove('drag-over'); }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (gameCompleted) return;
+        const shelfEl = e.target.closest('.shelf');
+        if (!shelfEl) return;
+        shelfEl.classList.remove('drag-over');
+        const targetShelf = parseInt(shelfEl.dataset.shelf);
+        const bookId = e.dataTransfer.getData('text/plain');
+        if (!bookId || draggedFromShelf === undefined || draggedFromShelf === null) return;
+        if (draggedFromShelf === targetShelf) return;
+        moveBook(draggedFromShelf, targetShelf, bookId);
+    }
+
+    // ===== TOUCH =====
+    let touchDragData = { bookId: null, fromShelf: null, clone: null, offsetX: 0, offsetY: 0 };
+
+    function handleTouchStart(e) {
+        if (gameCompleted) return;
+        const touch = e.touches[0];
+        const bookEl = e.target.closest('.book');
+        if (!bookEl) return;
+        const rect = bookEl.getBoundingClientRect();
+        touchDragData.bookId = bookEl.dataset.bookId;
+        touchDragData.fromShelf = parseInt(bookEl.dataset.shelf);
+        touchDragData.offsetX = touch.clientX - rect.left;
+        touchDragData.offsetY = touch.clientY - rect.top;
+        const clone = bookEl.cloneNode(true);
+        clone.style.position = 'fixed';
+        clone.style.pointerEvents = 'none';
+        clone.style.opacity = '0.8';
+        clone.style.zIndex = '1000';
+        clone.style.width = bookEl.offsetWidth + 'px';
+        clone.style.left = (touch.clientX - touchDragData.offsetX) + 'px';
+        clone.style.top = (touch.clientY - touchDragData.offsetY) + 'px';
+        clone.style.transform = 'scale(1.05) rotate(2deg)';
+        document.body.appendChild(clone);
+        touchDragData.clone = clone;
+        bookEl.classList.add('dragging');
+        e.preventDefault();
+    }
+
+    function handleTouchMove(e) {
+        if (!touchDragData.clone) return;
+        const touch = e.touches[0];
+        touchDragData.clone.style.left = (touch.clientX - touchDragData.offsetX) + 'px';
+        touchDragData.clone.style.top = (touch.clientY - touchDragData.offsetY) + 'px';
+        document.querySelectorAll('.shelf').forEach(el => el.classList.remove('drag-over'));
+        const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (elUnder) {
+            const shelf = elUnder.closest('.shelf');
+            if (shelf) shelf.classList.add('drag-over');
+        }
+        e.preventDefault();
+    }
+
+    function handleTouchEnd(e) {
+        if (!touchDragData.clone) {
+            document.querySelectorAll('.shelf').forEach(el => el.classList.remove('drag-over'));
+            return;
+        }
+        if (touchDragData.clone.parentNode) touchDragData.clone.parentNode.removeChild(touchDragData.clone);
+        touchDragData.clone = null;
+        document.querySelectorAll('.shelf').forEach(el => el.classList.remove('drag-over'));
+        if (gameCompleted) return;
+        const touch = e.changedTouches[0];
+        const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+        let targetShelf = null;
+        if (elUnder) {
+            const shelf = elUnder.closest('.shelf');
+            if (shelf) targetShelf = parseInt(shelf.dataset.shelf);
+        }
+        const bookId = touchDragData.bookId;
+        const fromShelf = touchDragData.fromShelf;
+        touchDragData.bookId = null;
+        touchDragData.fromShelf = null;
+        if (targetShelf === null || fromShelf === undefined || fromShelf === null) {
+            document.querySelectorAll('.book').forEach(el => el.classList.remove('dragging'));
+            return;
+        }
+        if (fromShelf === targetShelf) {
+            document.querySelectorAll('.book').forEach(el => el.classList.remove('dragging'));
+            return;
+        }
+        moveBook(fromShelf, targetShelf, bookId);
+        document.querySelectorAll('.book').forEach(el => el.classList.remove('dragging'));
+    }
+
+    // ===== ПЕРЕМЕЩЕНИЕ =====
+    function moveBook(fromShelf, toShelf, bookId) {
+        if (gameCompleted) return;
+        const fromIndex = shelves[fromShelf].indexOf(bookId);
+        if (fromIndex === -1) return;
+        if (shelves[toShelf].length >= BOOKS_PER_SHELF && toShelf !== EMPTY_SHELF_INDEX) {
+            statusMessage.textContent = '⚠️ На полке уже 3 книги!';
+            return;
+        }
+        // Если целевая полка пустая, можно положить книгу (даже если там 0 книг)
+        shelves[fromShelf].splice(fromIndex, 1);
+        shelves[toShelf].push(bookId);
+        render();
+        // Не проверяем автоматически
+        statusMessage.textContent = '📚 Расставьте книги, затем нажмите «Проверить»';
+    }
+
+    // ===== ПРОВЕРКА =====
+    function checkWinCondition() {
+        if (gameCompleted) return;
+        // Проверяем все полки, кроме пустой (индекс EMPTY_SHELF_INDEX)
+        let allCorrect = true;
+        for (let s = 0; s < SHELF_COUNT; s++) {
+            if (s === EMPTY_SHELF_INDEX) continue; // пустая полка не проверяется
+            const shelfBooks = shelves[s].map(id => bookMap[id]);
+            if (shelfBooks.length !== BOOKS_PER_SHELF) {
+                allCorrect = false;
+                break;
+            }
+            const types = shelfBooks.map(b => b.type);
+            const hasAuthor = types.includes('author');
+            const hasTitle = types.includes('title');
+            const hasHero = types.includes('hero');
+            if (!(hasAuthor && hasTitle && hasHero)) {
+                allCorrect = false;
+                break;
+            }
+        }
+        // Также проверяем, что пустая полка действительно пуста (на всякий случай)
+        if (shelves[EMPTY_SHELF_INDEX].length !== 0) {
+            allCorrect = false;
+        }
+
+        if (allCorrect) {
+            // Победа!
+            gameCompleted = true;
+            greenSquare.className = 'green-square show';
+            statusMessage.textContent = '🎉 Поздравляем! Все полки укомплектованы верно!';
+            checkBtn.disabled = true;
+            // Блокируем перемещение (gameCompleted = true уже блокирует)
+        } else {
+            // Неправильно
+            attempts--;
+            attemptsDisplay.textContent = attempts;
+            statusMessage.textContent = `❌ Неправильно! Осталось попыток: ${attempts}`;
+            if (attempts <= 0) {
+                gameCompleted = true;
+                checkBtn.disabled = true;
+                statusMessage.textContent = '😞 Попытки закончились. Нажмите «Начать сначала».';
+                greenSquare.className = 'green-square'; // скрываем квадрат
+            }
+        }
+    }
+
+    // ===== ОБРАБОТЧИК КНОПКИ ПРОВЕРКИ =====
+    checkBtn.addEventListener('click', function() {
+        if (gameCompleted) return;
+        if (attempts <= 0) {
+            statusMessage.textContent = '⚠️ Попытки закончились. Начните сначала.';
+            return;
+        }
+        checkWinCondition();
+    });
+
+    // ===== СБРОС =====
+    resetBtn.addEventListener('click', function() {
+        initGame();
+    });
+
+    // ===== QR =====
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 220,
+                    height: 220,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Локальный файл! Загрузите на хостинг.';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку ниже</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) {
+        if (e.target === qrModal) qrModal.classList.remove('active');
+    });
+    qrUpdateBtn.addEventListener('click', function() {
+        const url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (generateQR(url)) {
+                // успешно
+            } else {
+                alert('Не удалось создать QR-код. Проверьте ссылку.');
+            }
+        } else {
+            alert('Пожалуйста, введите ссылку на игру');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') qrUpdateBtn.click();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && qrModal.classList.contains('active')) {
+            qrModal.classList.remove('active');
+        }
+    });
+
+    // ===== СТАРТ =====
+    // Предотвращаем стандартное поведение браузера для drag
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => e.preventDefault());
+
+    initGame();
+})();
+</script>
+</body>
+</html>
