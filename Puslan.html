@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Викторина: Руслан и Людмила</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d0d2b;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #eee;
+        }
+        .game-wrapper {
+            background: #1a1a3a;
+            border-radius: 30px;
+            padding: 30px 25px;
+            max-width: 800px;
+            width: 100%;
+            border: 2px solid #6a4a8a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241,196,15,0.3);
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a5276;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .qr-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 18px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            border: 1px solid #4a4a6a;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .stats .item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stats .value {
+            color: #f1c40f;
+        }
+        .stats .hint-badge {
+            background: #e67e22;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #fff;
+        }
+        .stats .hint-badge.used {
+            background: #27ae60;
+        }
+
+        .question-container {
+            background: #12123a;
+            border-radius: 20px;
+            padding: 25px 20px;
+            border: 1px solid #4a4a6a;
+            margin-bottom: 20px;
+            min-height: 200px;
+        }
+        .question-text {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 600px) {
+            .options { grid-template-columns: 1fr; }
+        }
+        .option {
+            background: #1e1e4a;
+            border: 2px solid #3a3a6a;
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.15s;
+            touch-action: manipulation;
+            color: #ddd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .option:active { transform: scale(0.97); }
+        .option:hover { background: #2a2a5a; }
+        .option .letter { font-weight: bold; color: #8ab4d8; width: 28px; }
+        .option.disabled { opacity: 0.3; pointer-events: none; }
+        .option.selected {
+            border-color: #f1c40f;
+            background: #2a2a4a;
+        }
+        .option.fifty-hidden { display: none; }
+        .option.hint-wrong { text-decoration: line-through; opacity: 0.5; border-color: #e67e22; }
+
+        .hint-text-container {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: rgba(230, 126, 34, 0.15);
+            border-radius: 12px;
+            border-left: 4px solid #e67e22;
+            font-size: 17px;
+            color: #f1c40f;
+            display: none;
+        }
+        .hint-text-container.active {
+            display: block;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn {
+            background: #2a2a5a;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #0a0a2a;
+            transition: 0.08s;
+            border: 1px solid #5a5a7a;
+            touch-action: manipulation;
+            flex: 1 1 auto;
+            min-width: 80px;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0a0a2a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #0a0a2a; }
+        .btn.hint {
+            background: #e67e22;
+            box-shadow: 0 4px 0 #b85a0a;
+            border-color: #f39c12;
+        }
+        .btn.fifty {
+            background: #2980b9;
+            box-shadow: 0 4px 0 #1a5276;
+            border-color: #3498db;
+        }
+        .btn.text-hint {
+            background: #8e44ad;
+            box-shadow: 0 4px 0 #6c3483;
+            border-color: #9b59b6;
+        }
+        .btn.reset {
+            background: #c0392b;
+            box-shadow: 0 4px 0 #78281f;
+            border-color: #e74c3c;
+        }
+        .btn.next {
+            background: #27ae60;
+            box-shadow: 0 4px 0 #1e8449;
+            border-color: #2ecc71;
+        }
+        .btn.next:disabled { opacity: 0.3; }
+
+        .result-screen {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+        .result-screen.active { display: block; }
+        .result-screen .big {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .result-screen .sub {
+            font-size: 18px;
+            color: #aaa;
+        }
+        .result-screen .stat-block {
+            background: rgba(0,0,0,0.3);
+            border-radius: 14px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 20px;
+        }
+        .result-screen .stat-block .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .result-screen .stat-block .stat-item .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #f1c40f;
+        }
+        .result-screen .stat-block .stat-item .label {
+            font-size: 14px;
+            color: #aaa;
+        }
+        .result-screen .mistakes-list {
+            text-align: left;
+            background: rgba(0,0,0,0.3);
+            border-radius: 14px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 16px;
+        }
+        .result-screen .mistakes-list li {
+            list-style: none;
+            padding: 5px 0;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .result-screen .mistakes-list li:last-child { border-bottom: none; }
+        .win-text {
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241,196,15,0.5);
+        }
+        .lose-text {
+            color: #e74c3c;
+            text-shadow: 0 0 20px rgba(231,76,60,0.5);
+        }
+        .green-square {
+            background: #2e7d32;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 32px;
+            font-weight: 700;
+            box-shadow: 0 4px 0 #1b5e20, 0 6px 12px rgba(0,0,0,0.2);
+            min-width: 60px;
+            display: none;
+            margin: 0 auto;
+        }
+        .green-square.show { display: inline-block; }
+
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content {
+            background: #1a1a3a;
+            padding: 25px 30px 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 400px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            border: 1px solid #6a4a8a;
+        }
+        .qr-modal-content h2 { color: #f1c40f; font-size: 22px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #aaa; margin-bottom: 12px; font-size: 14px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #333; }
+        .qr-url-box {
+            background: #111;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #888;
+            border: 1px solid #333;
+            text-align: left;
+            font-family: monospace;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #333; background: #222; color: #fff; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #f1c40f; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-close-btn {
+            background: #c0392b;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .qr-close-btn:active { transform: scale(0.95); }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #222; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 500px) {
+            .title { font-size: 22px; }
+            .question-text { font-size: 19px; }
+            .option { font-size: 16px; padding: 12px 14px; }
+            .btn { font-size: 15px; padding: 10px 18px; }
+            .stats { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="header">
+        <div class="title">📖 Руслан и Людмила</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="stats" id="statsBar">
+        <span class="item">📌 Вопрос: <span class="value" id="questionCounter">1/15</span></span>
+        <span class="item">❤️ Попытки: <span class="value" id="attemptsCount">3</span></span>
+        <span class="item">💡 <span class="hint-badge" id="hintStatus">Подсказка</span></span>
+        <span class="item">✂️ <span class="hint-badge" id="fiftyStatus">50/50</span></span>
+        <span class="item">📝 <span class="hint-badge" id="textHintStatus">Намёк</span></span>
+    </div>
+
+    <div id="gameArea">
+        <div class="question-container" id="questionContainer">
+            <div class="question-text" id="questionText">Загрузка вопроса...</div>
+            <div class="options" id="optionsContainer"></div>
+            <div class="hint-text-container" id="hintTextContainer">
+                <span id="hintTextContent">Подсказка-намёк появится здесь.</span>
+            </div>
+        </div>
+
+        <div class="button-row">
+            <button class="btn hint" id="hintBtn">💡 Убрать ошибку</button>
+            <button class="btn fifty" id="fiftyBtn">✂️ 50/50</button>
+            <button class="btn text-hint" id="textHintBtn">📝 Намёк</button>
+            <button class="btn next" id="nextBtn" disabled>➡️ Далее</button>
+        </div>
+    </div>
+
+    <div class="result-screen" id="resultScreen">
+        <div class="big" id="resultTitle"></div>
+        <div class="sub" id="resultSub"></div>
+        <div class="stat-block" id="statBlock">
+            <div class="stat-item"><span class="number" id="statCorrect">0</span><span class="label">✅ Правильно</span></div>
+            <div class="stat-item"><span class="number" id="statWrong">0</span><span class="label">❌ Ошибки</span></div>
+            <div class="stat-item"><span class="number" id="statPercent">0%</span><span class="label">🎯 Процент</span></div>
+        </div>
+        <div id="resultMistakes"></div>
+        <div class="green-square" id="greenSquare">3</div>
+        <div style="margin-top: 20px;">
+            <button class="btn reset" id="retryBtn">🔄 Пройти заново</button>
+        </div>
+    </div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ===================== ВОПРОСЫ (15) =====================
+    const QUESTIONS = [
+        {
+            question: 'Кому посвящена поэма «Руслан и Людмила» в первом издании?',
+            options: ['Императору Александру I', 'Императору Николаю I', 'Екатерине II', 'Павлу I'],
+            correct: 0,
+            hint: 'Поэма была посвящена царствующему императору, который правил в год издания.'
+        },
+        {
+            question: 'В каком журнале были опубликованы первые отрывки поэмы?',
+            options: ['«Сын отечества»', '«Невский зритель»', '«Северная пчела»', '«Телескоп»'],
+            correct: 0,
+            hint: 'Это был один из самых известных литературных журналов начала XIX века.'
+        },
+        {
+            question: 'Сколько песен (глав) содержит поэма?',
+            options: ['6', '7', '8', '9'],
+            correct: 0,
+            hint: 'Количество песен равно числу основных героев-соперников.'
+        },
+        {
+            question: 'Какое древнерусское произведение повлияло на сюжет поэмы?',
+            options: ['«Слово о полку Игореве»', '«Повесть временных лет»', '«Задонщина»', '«Житие Александра Невского»'],
+            correct: 0,
+            hint: 'Пушкин использовал мотивы этого памятника для создания эпического колорита.'
+        },
+        {
+            question: 'Где Пушкин познакомился с сюжетом о похищении невесты?',
+            options: ['В итальянских поэмах', 'Во французских сказках', 'В русских народных балладах', 'В античных мифах'],
+            correct: 0,
+            hint: 'Источником послужили произведения итальянских поэтов эпохи Возрождения.'
+        },
+        {
+            question: 'Какой известный критик назвал поэму «детской сказочкой»?',
+            options: ['В.Г. Белинский', 'Н.Г. Чернышевский', 'А.А. Григорьев', 'Д.И. Писарев'],
+            correct: 0,
+            hint: 'Этот критик в зрелые годы пересмотрел своё отношение к юношескому творчеству Пушкина.'
+        },
+        {
+            question: 'В каком городе Пушкин завершил работу над поэмой?',
+            options: ['Санкт-Петербург', 'Москва', 'Киев', 'Тифлис'],
+            correct: 0,
+            hint: 'Поэма была закончена в северной столице, где Пушкин оказался после окончания лицея.'
+        },
+        {
+            question: 'Какое стихотворное вступление было добавлено к поэме в издании 1828 года?',
+            options: ['«У лукоморья дуб зелёный»', '«Руслан и Людмила» (пролог)', '«Сказка о царе Салтане»', '«Руслан у фонтана»'],
+            correct: 0,
+            hint: 'Это вступление стало самым известным фрагментом поэмы.'
+        },
+        {
+            question: 'Какая эпиграмма была написана на поэму?',
+            options: ['«Сказка ложь, да в ней намёк»', '«Руслан и Людмила» (эпиграмма)', '«Пушкин и цензура»', '«Ответ Каченовскому»'],
+            correct: 1,
+            hint: 'Пушкин сам написал иронический ответ на критику поэмы.'
+        },
+        {
+            question: 'Кто из героев поэмы является отрицательным персонажем?',
+            options: ['Рогдай', 'Фарлаф', 'Ратмир', 'Черномор'],
+            correct: 1,
+            hint: 'Этот персонаж предаёт Руслана ради личной выгоды.'
+        },
+        {
+            question: 'Какое имя носит няня Пушкина, которая рассказывала ему народные сказки?',
+            options: ['Арина Родионовна', 'Мария Алексеевна', 'Варвара Петровна', 'Екатерина Андреевна'],
+            correct: 0,
+            hint: 'Её рассказы повлияли на фольклорную атмосферу поэмы.'
+        },
+        {
+            question: 'В каком году поэма была впервые опубликована полностью?',
+            options: ['1820', '1821', '1822', '1823'],
+            correct: 0,
+            hint: 'Первое издание вышло в том же году, что и завершение работы.'
+        },
+        {
+            question: 'Какое заглавие было у поэмы в рукописи?',
+            options: ['«Руслан и Людмила»', '«Волшебная поэма»', '«Богатырская сказка»', '«Похищение Людмилы»'],
+            correct: 1,
+            hint: 'Первоначальное название отражало жанровую природу произведения.'
+        },
+        {
+            question: 'Как зовут главного героя поэмы?',
+            options: ['Руслан', 'Богдан', 'Владимир', 'Святослав'],
+            correct: 0,
+            hint: 'Имя героя созвучно с названием поэмы.'
+        },
+        {
+            question: 'Кто похитил Людмилу?',
+            options: ['Черномор', 'Рогдай', 'Фарлаф', 'Ратмир'],
+            correct: 0,
+            hint: 'Этот злодей обладает волшебной бородой.'
+        }
+    ];
+
+    // ===================== СОСТОЯНИЕ =====================
+    const TOTAL = QUESTIONS.length;
+    let currentIndex = 0;
+    let correctCount = 0;
+    let wrongIndices = [];
+    let attempts = 3;
+    let usedHint = false;
+    let usedFifty = false;
+    let usedTextHint = false;
+    let gameActive = true;
+    let answered = false;
+    let gameEnded = false; // чтобы не тратить попытку дважды
+
+    // DOM
+    const questionText = document.getElementById('questionText');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const questionCounter = document.getElementById('questionCounter');
+    const attemptsCount = document.getElementById('attemptsCount');
+    const hintBtn = document.getElementById('hintBtn');
+    const fiftyBtn = document.getElementById('fiftyBtn');
+    const textHintBtn = document.getElementById('textHintBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const gameArea = document.getElementById('gameArea');
+    const resultScreen = document.getElementById('resultScreen');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultSub = document.getElementById('resultSub');
+    const statCorrect = document.getElementById('statCorrect');
+    const statWrong = document.getElementById('statWrong');
+    const statPercent = document.getElementById('statPercent');
+    const resultMistakes = document.getElementById('resultMistakes');
+    const greenSquare = document.getElementById('greenSquare');
+    const retryBtn = document.getElementById('retryBtn');
+    const hintStatus = document.getElementById('hintStatus');
+    const fiftyStatus = document.getElementById('fiftyStatus');
+    const textHintStatus = document.getElementById('textHintStatus');
+    const hintTextContainer = document.getElementById('hintTextContainer');
+    const hintTextContent = document.getElementById('hintTextContent');
+
+    function updateStats() {
+        questionCounter.textContent = `${currentIndex+1}/${TOTAL}`;
+        attemptsCount.textContent = attempts;
+        hintStatus.textContent = usedHint ? 'Подсказка: ✔' : 'Подсказка';
+        hintStatus.className = 'hint-badge' + (usedHint ? ' used' : '');
+        fiftyStatus.textContent = usedFifty ? '50/50: ✔' : '50/50';
+        fiftyStatus.className = 'hint-badge' + (usedFifty ? ' used' : '');
+        textHintStatus.textContent = usedTextHint ? 'Намёк: ✔' : 'Намёк';
+        textHintStatus.className = 'hint-badge' + (usedTextHint ? ' used' : '');
+    }
+
+    function renderQuestion() {
+        if (!gameActive) return;
+        const q = QUESTIONS[currentIndex];
+        questionText.textContent = q.question;
+        optionsContainer.innerHTML = '';
+        const letters = ['А', 'Б', 'В', 'Г'];
+        q.options.forEach((opt, idx) => {
+            const div = document.createElement('div');
+            div.className = 'option';
+            div.dataset.index = idx;
+            div.innerHTML = `<span class="letter">${letters[idx]}.</span> ${opt}`;
+            div.addEventListener('click', () => onOptionClick(idx));
+            div.addEventListener('touchstart', (e) => { e.preventDefault(); onOptionClick(idx); }, { passive: false });
+            optionsContainer.appendChild(div);
+        });
+        answered = false;
+        nextBtn.disabled = true;
+        hintTextContainer.classList.remove('active');
+        updateStats();
+    }
+
+    function onOptionClick(index) {
+        if (!gameActive || answered) return;
+        const q = QUESTIONS[currentIndex];
+        const isCorrect = (index === q.correct);
+        answered = true;
+        const options = optionsContainer.querySelectorAll('.option');
+        options.forEach(el => el.classList.remove('selected'));
+        options[index].classList.add('selected');
+        options.forEach(el => el.style.pointerEvents = 'none');
+
+        if (isCorrect) {
+            correctCount++;
+        } else {
+            wrongIndices.push(currentIndex);
+        }
+        nextBtn.disabled = false;
+        if (currentIndex === TOTAL - 1) {
+            nextBtn.textContent = '🏁 Завершить';
+        } else {
+            nextBtn.textContent = '➡️ Далее';
+        }
+        updateStats();
+    }
+
+    function goToNext() {
+        if (!gameActive) return;
+        if (nextBtn.disabled) return;
+        if (!answered) return;
+        currentIndex++;
+        if (currentIndex >= TOTAL) {
+            endGame();
+            return;
+        }
+        renderQuestion();
+        updateStats();
+    }
+
+    // ===================== ПОДСКАЗКИ =====================
+    function useHint() {
+        if (!gameActive || usedHint || answered) return;
+        const q = QUESTIONS[currentIndex];
+        let wrongIdx = -1;
+        for (let i = 0; i < q.options.length; i++) {
+            if (i !== q.correct) {
+                wrongIdx = i;
+                break;
+            }
+        }
+        if (wrongIdx === -1) return;
+        const options = optionsContainer.querySelectorAll('.option');
+        options.forEach((el, idx) => {
+            if (idx === wrongIdx) {
+                el.classList.add('hint-wrong');
+            }
+        });
+        usedHint = true;
+        hintBtn.disabled = true;
+        updateStats();
+    }
+
+    function useFifty() {
+        if (!gameActive || usedFifty || answered) return;
+        const q = QUESTIONS[currentIndex];
+        const wrongIndices = [];
+        for (let i = 0; i < q.options.length; i++) {
+            if (i !== q.correct) wrongIndices.push(i);
+        }
+        const shuffled = wrongIndices.sort(() => Math.random() - 0.5);
+        const toRemove = shuffled.slice(0, 2);
+        const options = optionsContainer.querySelectorAll('.option');
+        options.forEach((el, idx) => {
+            if (toRemove.includes(idx)) {
+                el.classList.add('fifty-hidden');
+            }
+        });
+        usedFifty = true;
+        fiftyBtn.disabled = true;
+        updateStats();
+    }
+
+    function useTextHint() {
+        if (!gameActive || usedTextHint || answered) return;
+        const q = QUESTIONS[currentIndex];
+        hintTextContent.textContent = '💡 ' + q.hint;
+        hintTextContainer.classList.add('active');
+        usedTextHint = true;
+        textHintBtn.disabled = true;
+        updateStats();
+    }
+
+    // ===================== ЗАВЕРШЕНИЕ =====================
+    function endGame() {
+        if (gameEnded) return;
+        gameEnded = true;
+        gameActive = false;
+        gameArea.style.display = 'none';
+        resultScreen.classList.add('active');
+
+        // Тратим попытку (только если попытки ещё есть)
+        if (attempts > 0) {
+            attempts--;
+            attemptsCount.textContent = attempts;
+        }
+
+        const total = TOTAL;
+        const correct = correctCount;
+        const wrong = total - correct;
+        const percent = Math.round((correct / total) * 100);
+        const isWin = (percent >= 90 && wrong <= 2);
+
+        statCorrect.textContent = correct;
+        statWrong.textContent = wrong;
+        statPercent.textContent = percent + '%';
+
+        if (isWin) {
+            resultTitle.innerHTML = '🎉 Поздравляем! Вы прошли викторину!';
+            resultTitle.className = 'big win-text';
+            resultSub.textContent = `Вы ответили правильно на ${correct} из ${total} вопросов (${percent}%).`;
+            greenSquare.classList.add('show');
+        } else {
+            resultTitle.innerHTML = `😞 К сожалению, результат ниже 90% (${percent}%).`;
+            resultTitle.className = 'big lose-text';
+            resultSub.textContent = `Правильных ответов: ${correct} из ${total}. Попробуйте ещё раз.`;
+            greenSquare.classList.remove('show');
+        }
+
+        // Список ошибок (без правильных ответов)
+        let mistakesHtml = '';
+        if (wrongIndices.length > 0) {
+            mistakesHtml = '<div class="mistakes-list"><ul>';
+            wrongIndices.forEach(idx => {
+                const q = QUESTIONS[idx];
+                mistakesHtml += `<li><strong>Вопрос ${idx+1}:</strong> ${q.question}</li>`;
+            });
+            mistakesHtml += '</ul></div>';
+        } else {
+            mistakesHtml = '<div class="sub" style="color:#2ecc71;">✅ Ошибок нет! Отлично!</div>';
+        }
+        resultMistakes.innerHTML = mistakesHtml;
+
+        // Обновляем кнопку повтора
+        if (attempts > 0) {
+            retryBtn.textContent = `🔄 Пройти заново (осталось ${attempts} попыток)`;
+            retryBtn.style.display = 'inline-block';
+            retryBtn.disabled = false;
+        } else {
+            retryBtn.textContent = '⛔ Попытки закончились. Обновите страницу.';
+            retryBtn.style.display = 'inline-block';
+            retryBtn.disabled = true;
+        }
+        updateStats();
+    }
+
+    // ===================== ПЕРЕЗАПУСК =====================
+    function restartGame() {
+        if (attempts <= 0) {
+            alert('Попытки закончились. Перезагрузите страницу.');
+            return;
+        }
+        // Сброс всех параметров, кроме attempts (уже уменьшено при завершении)
+        currentIndex = 0;
+        correctCount = 0;
+        wrongIndices = [];
+        usedHint = false;
+        usedFifty = false;
+        usedTextHint = false;
+        gameActive = true;
+        answered = false;
+        gameEnded = false;
+        greenSquare.classList.remove('show');
+        resultScreen.classList.remove('active');
+        gameArea.style.display = 'block';
+        nextBtn.disabled = true;
+        hintBtn.disabled = false;
+        fiftyBtn.disabled = false;
+        textHintBtn.disabled = false;
+        hintStatus.textContent = 'Подсказка';
+        hintStatus.className = 'hint-badge';
+        fiftyStatus.textContent = '50/50';
+        fiftyStatus.className = 'hint-badge';
+        textHintStatus.textContent = 'Намёк';
+        textHintStatus.className = 'hint-badge';
+        hintTextContainer.classList.remove('active');
+        renderQuestion();
+        updateStats();
+    }
+
+    // ===================== QR =====================
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // ===================== ОБРАБОТЧИКИ =====================
+    hintBtn.addEventListener('click', useHint);
+    fiftyBtn.addEventListener('click', useFifty);
+    textHintBtn.addEventListener('click', useTextHint);
+    nextBtn.addEventListener('click', goToNext);
+    retryBtn.addEventListener('click', restartGame);
+
+    // ===================== СТАРТ =====================
+    renderQuestion();
+    updateStats();
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !nextBtn.disabled) {
+            goToNext();
+        }
+    });
+})();
+</script>
+</body>
+</html>
