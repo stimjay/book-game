@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Литературный морской бой ⚓</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
+    </script>
+    <style>
+        /* Стили без изменений (включая .debug-ship) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: #0a1628;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            color: #eee;
+        }
+        .game-wrapper {
+            background: #1a2a4a;
+            border-radius: 30px;
+            padding: 25px 20px;
+            max-width: 950px;
+            width: 100%;
+            border: 3px solid #4a7a9a;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f1c40f;
+            font-family: 'Comic Sans MS', cursive;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+        }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #1a5276;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .qr-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 0 #1a5276;
+        }
+        .qr-btn:hover {
+            background: #3498db;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 14px;
+            border-radius: 14px;
+            border: 1px solid #4a7a9a;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .status-bar .item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-bar .value {
+            color: #f1c40f;
+        }
+        .fields-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .field-wrapper {
+            flex: 1 1 320px;
+            min-width: 280px;
+            background: #0f1f2f;
+            border-radius: 16px;
+            padding: 10px;
+            border: 2px solid #3a6a8a;
+        }
+        .field-wrapper h3 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #8ab4d8;
+            font-size: 18px;
+        }
+        .field {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            aspect-ratio: 1;
+            width: 100%;
+        }
+        .cell {
+            background: #1a3a5a;
+            border-radius: 4px;
+            aspect-ratio: 1;
+            cursor: default;
+            transition: 0.1s;
+            position: relative;
+        }
+        .cell.enemy {
+            cursor: pointer;
+        }
+        .cell.enemy:hover {
+            background: #2a5a7a;
+        }
+        .cell.enemy:active {
+            transform: scale(0.92);
+        }
+        .cell.ship {
+            background: #4a7a9a;
+        }
+        .cell.ship.hit {
+            background: #e74c3c;
+        }
+        .cell.ship.sunk {
+            background: #c0392b;
+        }
+        .cell.miss {
+            background: #2a4a6a;
+        }
+        .cell.miss::after {
+            content: '•';
+            color: #8ab4d8;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        .cell.ship.hit::after,
+        .cell.ship.sunk::after {
+            content: '✕';
+            color: #fff;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        .cell.disabled {
+            cursor: default;
+            opacity: 0.6;
+        }
+        .debug-ship {
+            outline: 2px solid red !important;
+            outline-offset: -2px;
+            z-index: 1;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #2a4a6a;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #0a2a4a;
+            border: 1px solid #4a7a9a;
+            transition: 0.08s;
+            touch-action: manipulation;
+        }
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #0a2a4a;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #0a2a4a;
+        }
+        .btn.primary {
+            background: #27ae60;
+            box-shadow: 0 4px 0 #1e8449;
+            border-color: #2ecc71;
+        }
+        .btn.primary:hover {
+            background: #2ecc71;
+        }
+        .message-area {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            min-height: 40px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px dashed #4a7a9a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .blue-square {
+            background: #1565C0;
+            color: white;
+            padding: 4px 14px;
+            border-radius: 6px;
+            font-size: 28px;
+            font-weight: 700;
+            box-shadow: 0 3px 0 #0D47A1;
+            min-width: 44px;
+            text-align: center;
+            display: none;
+        }
+        .blue-square.show {
+            display: inline-block;
+            animation: pop 0.4s ease-out;
+        }
+        @keyframes pop {
+            0% {
+                transform: scale(0);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .question-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        .question-modal.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        .question-box {
+            background: #1a2a4a;
+            border: 2px solid #f1c40f;
+            border-radius: 25px;
+            padding: 30px 25px;
+            max-width: 500px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+            animation: popIn 0.3s;
+        }
+        @keyframes popIn {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .question-box h2 {
+            color: #f1c40f;
+            font-size: 22px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .question-box .q-text {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .question-box .q-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .question-box .q-options button {
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #4a7a9a;
+            background: #0f1f2f;
+            color: #eee;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .question-box .q-options button:active {
+            transform: scale(0.95);
+        }
+        .question-box .q-options button:hover {
+            background: #2a4a6a;
+        }
+        .question-box .q-options button.correct {
+            background: #27ae60;
+            border-color: #2ecc71;
+        }
+        .question-box .q-options button.wrong {
+            background: #c0392b;
+            border-color: #e74c3c;
+        }
+        .question-box .q-result {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 12px;
+            min-height: 30px;
+        }
+        .question-box .q-close-btn {
+            display: none;
+            margin: 12px auto 0;
+            padding: 10px 30px;
+            border-radius: 30px;
+            border: none;
+            background: #2980b9;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .question-box .q-close-btn:active {
+            transform: scale(0.95);
+        }
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active {
+            display: flex;
+        }
+        .qr-modal-content {
+            background: #1a2a4a;
+            padding: 25px 30px 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 400px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+            border: 1px solid #f1c40f;
+        }
+        .qr-modal-content h2 {
+            color: #f1c40f;
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        .qr-modal-content .subtitle {
+            color: #aaa;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        #qrcode {
+            display: inline-block;
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            margin: 5px auto;
+            border: 2px solid #333;
+        }
+        .qr-url-box {
+            background: #111;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #888;
+            border: 1px solid #333;
+            text-align: left;
+            font-family: monospace;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+        .qr-url-label {
+            font-size: 12px;
+            color: #888;
+            text-align: left;
+            margin-bottom: 3px;
+        }
+        .qr-input-group {
+            display: flex;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .qr-input-group input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            background: #222;
+            color: #fff;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .qr-input-group input:focus {
+            border-color: #f1c40f;
+            outline: none;
+        }
+        .qr-input-group button {
+            background: #27ae60;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .qr-close-btn {
+            background: #c0392b;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .qr-close-btn:active {
+            transform: scale(0.95);
+        }
+        .qr-help {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+            padding: 8px;
+            background: #222;
+            border-radius: 8px;
+            border-left: 3px solid #f39c12;
+            text-align: left;
+        }
+        @media (max-width: 750px) {
+            .fields-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .field-wrapper {
+                width: 100%;
+                max-width: 380px;
+            }
+            .question-box .q-options {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 450px) {
+            .field-wrapper {
+                max-width: 320px;
+            }
+            .title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="header">
+            <div class="title">⚓ Литературный морской бой</div>
+            <button class="qr-btn" id="qrBtn">📱 QR</button>
+        </div>
+
+        <div class="status-bar">
+            <span class="item">🎯 Ход: <span class="value" id="turnIndicator">Ваш</span></span>
+        </div>
+
+        <div class="fields-container">
+            <div class="field-wrapper">
+                <h3>🚢 Ваше поле</h3>
+                <div class="field" id="playerField"></div>
+            </div>
+            <div class="field-wrapper">
+                <h3>🎯 Поле врага</h3>
+                <div class="field" id="enemyField"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn primary" id="newGameBtn">🔄 Новая игра</button>
+        </div>
+
+        <div class="message-area" id="messageArea">
+            <span id="messageText">Нажмите «Новая игра»</span>
+            <span class="blue-square" id="blueSquare">8</span>
+        </div>
+    </div>
+
+    <!-- Модальное окно вопроса -->
+    <div class="question-modal" id="questionModal">
+        <div class="question-box">
+            <h2>📖 Литературный вопрос</h2>
+            <div class="q-text" id="qText">Вопрос загружается...</div>
+            <div class="q-options" id="qOptions"></div>
+            <div class="q-result" id="qResult"></div>
+            <button class="q-close-btn" id="qCloseBtn">Продолжить</button>
+        </div>
+    </div>
+
+    <!-- QR modal -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-modal-content">
+            <h2>📱 QR-код</h2>
+            <p class="subtitle">Отсканируйте для перехода на игру</p>
+            <div id="qrcode"></div>
+            <div class="qr-url-label">🔗 Ссылка:</div>
+            <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+            <div class="qr-input-group">
+                <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+                <button id="qrUpdateBtn">Обновить</button>
+            </div>
+            <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+            <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ===================== РЕЖИМ ОТЛАДКИ =====================
+            const DEBUG_MODE = false; // установите false, чтобы убрать красную обводку
+
+            // ===================== ВОПРОСЫ =====================
+            const ALL_QUESTIONS = [
+                { question: 'Кто написал роман «Мастер и Маргарита»?', options: ['М.А. Булгаков', 'Б.Л. Пастернак',
+                        'И.А. Ильф', 'Е.П. Петров'
+                    ], correct: 0 },
+                { question: 'Какой роман принадлежит Борису Пастернаку?', options: ['Доктор Живаго', 'Тихий Дон',
+                        'Поднятая целина', 'Молодая гвардия'
+                    ], correct: 0 },
+                { question: 'Кто автор повести «Собачье сердце»?', options: ['М.А. Булгаков', 'А.П. Чехов',
+                        'И.А. Бунин', 'А.И. Куприн'
+                    ], correct: 0 },
+                { question: 'В каком году вышла повесть «Старик и море»?', options: ['1952', '1954', '1956',
+                        '1958'
+                    ], correct: 0 },
+                { question: 'Кто написал роман «Улисс»?', options: ['Дж. Джойс', 'В. Вулф', 'Э. Хемингуэй',
+                        'Ф.С. Фицджеральд'
+                    ], correct: 0 },
+                { question: 'Какой поэт основал акмеизм?', options: ['Н.С. Гумилёв', 'А.А. Ахматова',
+                        'О.Э. Мандельштам', 'М.И. Цветаева'
+                    ], correct: 0 },
+                { question: 'Кто написал роман «Война и мир»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 0 },
+                { question: 'Кто автор «Преступления и наказания»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 1 },
+                { question: 'Кто написал «Евгения Онегина»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 2 },
+                { question: 'Кто автор «Анны Карениной»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 0 },
+                { question: 'Кто написал «Идиота»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 1 },
+                { question: 'Кто автор «Мёртвых душ»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 3 },
+                { question: 'Кто написал «Вишнёвый сад»?', options: ['Л.Н. Толстой', 'А.П. Чехов',
+                        'И.А. Бунин', 'А.И. Куприн'
+                    ], correct: 1 },
+                { question: 'Кто автор «Братьев Карамазовых»?', options: ['Л.Н. Толстой', 'Ф.М. Достоевский',
+                        'А.С. Пушкин', 'Н.В. Гоголь'
+                    ], correct: 1 },
+                { question: 'Кто написал «Героя нашего времени»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин',
+                        'Н.В. Гоголь', 'И.С. Тургенев'
+                    ], correct: 0 },
+                { question: 'Кто автор «Шинели»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин', 'Н.В. Гоголь',
+                        'И.С. Тургенев'
+                    ], correct: 2 },
+                { question: 'Кто написал «Отцы и дети»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин', 'Н.В. Гоголь',
+                        'И.С. Тургенев'
+                    ], correct: 3 },
+                { question: 'Кто автор «Капитанской дочки»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин',
+                        'Н.В. Гоголь', 'И.С. Тургенев'
+                    ], correct: 1 },
+                { question: 'Кто написал «Чайку»?', options: ['Л.Н. Толстой', 'А.П. Чехов', 'И.А. Бунин',
+                        'А.И. Куприн'
+                    ], correct: 1 },
+                { question: 'Кто автор «Обломова»?', options: ['И.А. Гончаров', 'А.П. Чехов', 'И.А. Бунин',
+                        'А.И. Куприн'
+                    ], correct: 0 },
+                { question: 'Кто написал «Медный всадник»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин',
+                        'Н.В. Гоголь', 'И.С. Тургенев'
+                    ], correct: 1 },
+                { question: 'Кто автор «Ревизора»?', options: ['М.Ю. Лермонтов', 'А.С. Пушкин', 'Н.В. Гоголь',
+                        'И.С. Тургенев'
+                    ], correct: 2 },
+                { question: 'Кто написал «Гранатовый браслет»?', options: ['И.А. Гончаров', 'А.П. Чехов',
+                        'И.А. Бунин', 'А.И. Куприн'
+                    ], correct: 3 },
+                { question: 'Кто автор «Тёмных аллей»?', options: ['И.А. Гончаров', 'А.П. Чехов', 'И.А. Бунин',
+                        'А.И. Куприн'
+                    ], correct: 2 },
+                { question: 'Кто написал «Двенадцать стульев»?', options: ['М.А. Булгаков', 'И.А. Ильф и Е.П. Петров',
+                        'Б.Л. Пастернак', 'А.С. Пушкин'
+                    ], correct: 1 },
+                { question: 'Кто автор «Золотого телёнка»?', options: ['М.А. Булгаков', 'И.А. Ильф и Е.П. Петров',
+                        'Б.Л. Пастернак', 'А.С. Пушкин'
+                    ], correct: 1 },
+            ];
+
+            // ===================== ИГРОВОЕ ПОЛЕ =====================
+            const SIZE = 8;
+            const SHIP_LENGTHS = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];
+
+            class Ship {
+                constructor(length, row, col, orientation) {
+                    this.length = length;
+                    this.row = row;
+                    this.col = col;
+                    this.orientation = orientation;
+                    this.hits = 0;
+                    this.sunk = false;
+                }
+                getCells() {
+                    const cells = [];
+                    for (let i = 0; i < this.length; i++) {
+                        if (this.orientation === 'h') {
+                            cells.push({ r: this.row, c: this.col + i });
+                        } else {
+                            cells.push({ r: this.row + i, c: this.col });
+                        }
+                    }
+                    return cells;
+                }
+                contains(r, c) {
+                    return this.getCells().some(cell => cell.r === r && cell.c === c);
+                }
+                registerHit() {
+                    if (this.sunk) return false;
+                    this.hits++;
+                    if (this.hits >= this.length) {
+                        this.sunk = true;
+                        return true;
+                    }
+                    return false;
+                }
+                isSunk() {
+                    return this.sunk;
+                }
+            }
+
+            let playerShips = [];
+            let enemyShips = [];
+            let playerHits = [];
+            let enemyHits = [];
+            let gameActive = false;
+            let playerTurn = true;
+            let waitingForQuestion = false;
+            let currentShotRow = -1,
+                currentShotCol = -1;
+            let gameOver = false;
+            let botTargets = [];
+            let usedQuestions = [];
+
+            const playerFieldEl = document.getElementById('playerField');
+            const enemyFieldEl = document.getElementById('enemyField');
+            const turnIndicator = document.getElementById('turnIndicator');
+            const messageText = document.getElementById('messageText');
+            const blueSquare = document.getElementById('blueSquare');
+            const newGameBtn = document.getElementById('newGameBtn');
+            const questionModal = document.getElementById('questionModal');
+            const qText = document.getElementById('qText');
+            const qOptions = document.getElementById('qOptions');
+            const qResult = document.getElementById('qResult');
+            const qCloseBtn = document.getElementById('qCloseBtn');
+
+            // ===================== ГЕНЕРАЦИЯ КОРАБЛЕЙ =====================
+            function generateShips() {
+                for (let attempt = 0; attempt < 500; attempt++) {
+                    const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+                    const ships = [];
+                    const lengths = SHIP_LENGTHS.slice();
+                    let ok = true;
+                    for (let len of lengths) {
+                        let placed = false;
+                        for (let tries = 0; tries < 300; tries++) {
+                            const orientation = Math.random() < 0.5 ? 'h' : 'v';
+                            const row = Math.floor(Math.random() * SIZE);
+                            const col = Math.floor(Math.random() * SIZE);
+                            if (canPlace(grid, row, col, len, orientation)) {
+                                placeOnGrid(grid, row, col, len, orientation);
+                                ships.push(new Ship(len, row, col, orientation));
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (!placed) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok) continue;
+                    let cellCount = 0;
+                    for (let r = 0; r < SIZE; r++)
+                        for (let c = 0; c < SIZE; c++)
+                            if (grid[r][c] === 1) cellCount++;
+                    if (cellCount !== 20) continue;
+                    const counts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+                    for (let s of ships) counts[s.length] = (counts[s.length] || 0) + 1;
+                    if (counts[1] === 4 && counts[2] === 3 && counts[3] === 2 && counts[4] === 1)
+                        return ships;
+                }
+                return getFallbackShips();
+            }
+
+            function canPlace(grid, row, col, length, orientation) {
+                if (orientation === 'h') {
+                    if (col + length > SIZE) return false;
+                    for (let i = 0; i < length; i++) {
+                        if (grid[row][col + i] !== 0) return false;
+                        for (let dr = -1; dr <= 1; dr++)
+                            for (let dc = -1; dc <= 1; dc++) {
+                                const nr = row + dr,
+                                    nc = col + i + dc;
+                                if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] !== 0)
+                                    return false;
+                            }
+                    }
+                } else {
+                    if (row + length > SIZE) return false;
+                    for (let i = 0; i < length; i++) {
+                        if (grid[row + i][col] !== 0) return false;
+                        for (let dr = -1; dr <= 1; dr++)
+                            for (let dc = -1; dc <= 1; dc++) {
+                                const nr = row + i + dr,
+                                    nc = col + dc;
+                                if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] !== 0)
+                                    return false;
+                            }
+                    }
+                }
+                return true;
+            }
+
+            function placeOnGrid(grid, row, col, length, orientation) {
+                if (orientation === 'h')
+                    for (let i = 0; i < length; i++) grid[row][col + i] = 1;
+                else
+                    for (let i = 0; i < length; i++) grid[row + i][col] = 1;
+            }
+
+            function getFallbackShips() {
+                const defs = [
+                    { len: 4, row: 0, col: 0, or: 'h' },
+                    { len: 3, row: 0, col: 5, or: 'h' },
+                    { len: 3, row: 2, col: 0, or: 'h' },
+                    { len: 2, row: 2, col: 4, or: 'h' },
+                    { len: 2, row: 4, col: 0, or: 'h' },
+                    { len: 2, row: 4, col: 3, or: 'h' },
+                    { len: 1, row: 6, col: 0, or: 'h' },
+                    { len: 1, row: 6, col: 2, or: 'h' },
+                    { len: 1, row: 6, col: 4, or: 'h' },
+                    { len: 1, row: 6, col: 6, or: 'h' },
+                ];
+                return defs.map(d => new Ship(d.len, d.row, d.col, d.or));
+            }
+
+            // ===================== ОТРИСОВКА ПОЛЯ =====================
+            function renderField(container, ships, hits, isEnemy = false) {
+                container.innerHTML = '';
+                const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+                for (let s of ships) {
+                    for (let c of s.getCells()) grid[c.r][c.c] = 1;
+                }
+
+                for (let r = 0; r < SIZE; r++) {
+                    for (let c = 0; c < SIZE; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (isEnemy) cell.classList.add('enemy');
+
+                        const hit = hits.some(h => h.row === r && h.col === c);
+                        if (hit) {
+                            if (grid[r][c] === 1) {
+                                cell.classList.add('ship', 'hit');
+                                const ship = ships.find(s => s.contains(r, c));
+                                if (ship && ship.isSunk()) cell.classList.add('sunk');
+                            } else {
+                                cell.classList.add('miss');
+                            }
+                        } else {
+                            const showShip = (grid[r][c] === 1 && (!isEnemy || gameOver));
+                            if (showShip) cell.classList.add('ship');
+                        }
+                        if (!isEnemy && grid[r][c] === 1) cell.classList.add('ship');
+
+                        // Режим отладки: красная обводка кораблей противника
+                        if (DEBUG_MODE && isEnemy && grid[r][c] === 1) {
+                            cell.classList.add('debug-ship');
+                        }
+
+                        if (isEnemy && gameActive && playerTurn && !gameOver && !waitingForQuestion) {
+                            const alreadyHit = hits.some(h => h.row === r && h.col === c);
+                            if (!alreadyHit) {
+                                cell.style.cursor = 'pointer';
+                                cell.addEventListener('click', (function(r, c) {
+                                    return function() { fireAtEnemy(r, c); };
+                                })(r, c));
+                                cell.addEventListener('touchstart', (function(r, c) {
+                                    return function(e) {
+                                        e.preventDefault();
+                                        fireAtEnemy(r, c);
+                                    };
+                                })(r, c), { passive: false });
+                            }
+                        }
+
+                        container.appendChild(cell);
+                    }
+                }
+            }
+
+            // ===================== ПРОВЕРКА ПОБЕДЫ =====================
+            function checkPlayerVictory() {
+                if (gameOver || !gameActive) return false;
+                const allSunk = enemyShips.every(s => s.isSunk());
+                if (allSunk) {
+                    gameOver = true;
+                    gameActive = false;
+                    messageText.innerHTML = '🎉 Вы потопили все корабли врага! Поздравляем!';
+                    blueSquare.classList.add('show');
+                    turnIndicator.textContent = 'Победа!';
+                    renderField(enemyFieldEl, enemyShips, playerHits, true);
+                    renderField(playerFieldEl, playerShips, enemyHits, false);
+                    return true;
+                }
+                return false;
+            }
+
+            function checkComputerVictory() {
+                if (gameOver || !gameActive) return false;
+                const allSunk = playerShips.every(s => s.isSunk());
+                if (allSunk) {
+                    gameOver = true;
+                    gameActive = false;
+                    messageText.innerHTML = '😞 Ваши корабли уничтожены! Вы проиграли.';
+                    blueSquare.classList.remove('show');
+                    turnIndicator.textContent = 'Поражение';
+                    renderField(playerFieldEl, playerShips, enemyHits, false);
+                    renderField(enemyFieldEl, enemyShips, playerHits, true);
+                    return true;
+                }
+                return false;
+            }
+
+            // ===================== ВЫСТРЕЛ (только при правильном ответе) =====================
+            function performShot() {
+                const row = currentShotRow,
+                    col = currentShotCol;
+                // Добавляем выстрел в историю
+                playerHits.push({ row, col });
+
+                // Определяем попадание
+                const ship = enemyShips.find(s => s.contains(row, col));
+                const isHit = !!ship;
+
+                let sunk = false;
+                if (isHit) {
+                    sunk = ship.registerHit();
+                    if (sunk) messageText.textContent = '💀 Корабль врага потоплен!';
+                    else messageText.textContent = '💥 Попадание!';
+                } else {
+                    messageText.textContent = '💨 Промах!';
+                }
+
+                renderField(enemyFieldEl, enemyShips, playerHits, true);
+
+                if (checkPlayerVictory()) {
+                    return;
+                }
+
+                if (!isHit) {
+                    playerTurn = false;
+                    turnIndicator.textContent = 'Компьютер';
+                    messageText.textContent = '🤖 Ход компьютера...';
+                    setTimeout(() => computerTurn(), 800);
+                } else {
+                    turnIndicator.textContent = 'Ваш';
+                    messageText.textContent = '🔥 Ещё выстрел!';
+                }
+            }
+
+            // ===================== ПРОПУСК ХОДА (при неправильном ответе) =====================
+            function skipTurn() {
+                playerTurn = false;
+                turnIndicator.textContent = 'Компьютер';
+                messageText.textContent = '❌ Неправильный ответ! Ход переходит к компьютеру.';
+                setTimeout(() => computerTurn(), 800);
+            }
+
+            // ===================== ВЫЗОВ ВОПРОСА =====================
+            function fireAtEnemy(row, col) {
+                if (!gameActive || !playerTurn || gameOver || waitingForQuestion) return;
+                if (playerHits.some(h => h.row === row && h.col === col)) return;
+                currentShotRow = row;
+                currentShotCol = col;
+                showQuestion();
+            }
+
+            // ===================== ВОПРОСЫ =====================
+            function showQuestion() {
+                let available = ALL_QUESTIONS.filter((_, idx) => !usedQuestions.includes(idx));
+                if (available.length === 0) {
+                    usedQuestions = [];
+                    available = ALL_QUESTIONS;
+                }
+                const randomIdx = Math.floor(Math.random() * available.length);
+                const q = available[randomIdx];
+                const qIndex = ALL_QUESTIONS.indexOf(q);
+                usedQuestions.push(qIndex);
+
+                const options = q.options.slice();
+                const correctAnswer = options[q.correct];
+                const shuffledOptions = shuffleArray(options);
+                const correctIndex = shuffledOptions.indexOf(correctAnswer);
+
+                waitingForQuestion = true;
+                qText.textContent = q.question;
+                qOptions.innerHTML = '';
+                qResult.textContent = '';
+                qResult.className = 'q-result';
+                qCloseBtn.style.display = 'none';
+                shuffledOptions.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = opt;
+                    btn.dataset.idx = idx;
+                    btn.addEventListener('click', function() {
+                        if (this.disabled) return;
+                        answerQuestion(this, correctIndex);
+                    });
+                    btn.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        if (this.disabled) return;
+                        answerQuestion(this, correctIndex);
+                    }, { passive: false });
+                    qOptions.appendChild(btn);
+                });
+                questionModal.classList.add('active');
+            }
+
+            function answerQuestion(btn, correctIdx) {
+                const buttons = qOptions.querySelectorAll('button');
+                buttons.forEach(b => b.disabled = true);
+                const chosen = parseInt(btn.dataset.idx);
+                const isCorrect = (chosen === correctIdx);
+                if (isCorrect) {
+                    btn.classList.add('correct');
+                    qResult.textContent = '✅ Правильно! Вы стреляете!';
+                    qResult.className = 'q-result correct';
+                } else {
+                    btn.classList.add('wrong');
+                    buttons[correctIdx].classList.add('correct');
+                    qResult.textContent = '❌ Неправильно! Ход пропущен.';
+                    qResult.className = 'q-result wrong';
+                }
+                qCloseBtn.style.display = 'block';
+                qCloseBtn.dataset.correct = isCorrect ? 'true' : 'false';
+                qCloseBtn.addEventListener('click', function() {
+                    const correct = this.dataset.correct === 'true';
+                    questionModal.classList.remove('active');
+                    waitingForQuestion = false;
+                    if (correct) {
+                        performShot(); // выполняем выстрел
+                    } else {
+                        skipTurn(); // пропускаем ход
+                    }
+                }, { once: true });
+            }
+
+            function shuffleArray(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // ===================== ХОД КОМПЬЮТЕРА =====================
+            function computerTurn() {
+                if (!gameActive || gameOver) return;
+                let row, col;
+                if (botTargets.length > 0) {
+                    const target = botTargets.shift();
+                    row = target.r;
+                    col = target.c;
+                } else {
+                    const available = [];
+                    for (let r = 0; r < SIZE; r++) {
+                        for (let c = 0; c < SIZE; c++) {
+                            if (!enemyHits.some(h => h.row === r && h.col === c)) {
+                                available.push({ r, c });
+                            }
+                        }
+                    }
+                    if (available.length === 0) return;
+                    const shot = available[Math.floor(Math.random() * available.length)];
+                    row = shot.r;
+                    col = shot.c;
+                }
+                if (enemyHits.some(h => h.row === row && h.col === col)) {
+                    setTimeout(() => computerTurn(), 100);
+                    return;
+                }
+                const ship = playerShips.find(s => s.contains(row, col));
+                const hit = !!ship;
+                enemyHits.push({ row, col });
+
+                if (hit) {
+                    const sunk = ship.registerHit();
+                    if (sunk) {
+                        botTargets = [];
+                        messageText.textContent = '💀 Компьютер потопил ваш корабль!';
+                    } else {
+                        const dirs = [
+                            [0, 1],
+                            [0, -1],
+                            [1, 0],
+                            [-1, 0]
+                        ];
+                        for (let d of dirs) {
+                            const nr = row + d[0],
+                                nc = col + d[1];
+                            if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) {
+                                if (!enemyHits.some(h => h.row === nr && h.col === nc)) {
+                                    if (!botTargets.some(t => t.r === nr && t.c === nc)) {
+                                        botTargets.push({ r: nr, c: nc });
+                                    }
+                                }
+                            }
+                        }
+                        messageText.textContent = '💥 Компьютер попал!';
+                    }
+                } else {
+                    messageText.textContent = '💨 Компьютер промахнулся!';
+                }
+
+                renderField(playerFieldEl, playerShips, enemyHits, false);
+
+                if (checkComputerVictory()) {
+                    return;
+                }
+
+                if (!hit) {
+                    playerTurn = true;
+                    turnIndicator.textContent = 'Ваш';
+                    messageText.textContent = 'Ваш ход!';
+                } else {
+                    setTimeout(() => computerTurn(), 600);
+                }
+            }
+
+            // ===================== НОВАЯ ИГРА =====================
+            function newGame() {
+                playerShips = generateShips();
+                enemyShips = generateShips();
+                playerHits = [];
+                enemyHits = [];
+                botTargets = [];
+                usedQuestions = [];
+                gameActive = true;
+                gameOver = false;
+                playerTurn = true;
+                waitingForQuestion = false;
+                blueSquare.classList.remove('show');
+                turnIndicator.textContent = 'Ваш';
+                messageText.textContent = 'Начинайте! Стреляйте по полю врага.';
+                renderField(playerFieldEl, playerShips, enemyHits, false);
+                renderField(enemyFieldEl, enemyShips, playerHits, true);
+            }
+
+            // ===================== QR =====================
+            const qrBtn = document.getElementById('qrBtn');
+            const qrModal = document.getElementById('qrModal');
+            const qrCloseBtn = document.getElementById('qrCloseBtn');
+            const qrUrl = document.getElementById('qrUrl');
+            const qrUrlInput = document.getElementById('qrUrlInput');
+            const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+            const qrcodeContainer = document.getElementById('qrcode');
+
+            function generateQR(text) {
+                qrcodeContainer.innerHTML = '';
+                if (text && text.trim() !== '') {
+                    try {
+                        new QRCode(qrcodeContainer, {
+                            text: text,
+                            width: 200,
+                            height: 200,
+                            colorDark: '#000000',
+                            colorLight: '#ffffff',
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                        return true;
+                    } catch (e) { return false; }
+                }
+                return false;
+            }
+
+            function getCurrentUrl() {
+                let url = window.location.href;
+                if (url.startsWith('file://')) return '';
+                return url;
+            }
+
+            qrBtn.addEventListener('click', function() {
+                qrModal.classList.add('active');
+                let currentUrl = getCurrentUrl();
+                if (currentUrl) {
+                    qrUrl.textContent = currentUrl;
+                    qrUrlInput.value = currentUrl;
+                    generateQR(currentUrl);
+                } else {
+                    qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+                    qrUrlInput.value = '';
+                    qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+                }
+            });
+
+            qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+            qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+            qrUpdateBtn.addEventListener('click', function() {
+                let url = qrUrlInput.value.trim();
+                if (url) {
+                    qrUrl.textContent = url;
+                    if (!generateQR(url)) alert('Не удалось создать QR-код');
+                } else {
+                    alert('Введите ссылку');
+                }
+            });
+            qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+            // ===================== СТАРТ =====================
+            newGameBtn.addEventListener('click', newGame);
+            newGame();
+        })();
+    </script>
+</body>
+</html>
