@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Книжный лабиринт 📚</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: #0a0a0a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            color: #eee;
+        }
+        .game-wrapper {
+            background: #1a1a1a;
+            border-radius: 30px;
+            padding: 25px 20px;
+            max-width: 750px;
+            width: 100%;
+            border: 3px solid #f1c40f;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f1c40f;
+            font-family: 'Comic Sans MS', cursive;
+            text-shadow: 0 0 10px rgba(241,196,15,0.3);
+        }
+        .qr-btn {
+            background: #2980b9;
+            border: none;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #1a5276;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .qr-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #1a5276; }
+        .qr-btn:hover { background: #3498db; }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 14px;
+            border-radius: 14px;
+            border: 1px solid #f1c40f;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .stats .item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stats .value {
+            color: #f1c40f;
+        }
+        .stats .value.green { color: #2ecc71; }
+        .stats .value.red { color: #e74c3c; }
+
+        .labyrinth-container {
+            position: relative;
+            background: #0a0a0a;
+            border-radius: 16px;
+            padding: 8px;
+            border: 2px solid #f1c40f;
+            touch-action: none;
+        }
+        #labyrinthCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #0a0a0a;
+            border-radius: 10px;
+            touch-action: none;
+            cursor: pointer;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #2a2a2a;
+            border: none;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 14px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #0a0a0a;
+            border: 1px solid #f1c40f;
+            transition: 0.08s;
+            touch-action: manipulation;
+            min-width: 70px;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0a0a0a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(2px); box-shadow: 0 2px 0 #0a0a0a; }
+        .btn.primary { background: #27ae60; box-shadow: 0 4px 0 #1e8449; border-color: #2ecc71; }
+        .btn.primary:hover { background: #2ecc71; }
+        .btn.danger { background: #c0392b; box-shadow: 0 4px 0 #78281f; border-color: #e74c3c; }
+        .btn.danger:hover { background: #e74c3c; }
+
+        .message-area {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            min-height: 40px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1px dashed #f1c40f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .message-area .highlight {
+            color: #f1c40f;
+        }
+        .win-text {
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241,196,15,0.5);
+            font-size: 28px;
+            font-family: 'Comic Sans MS', cursive;
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px rgba(241,196,15,0.2); }
+            100% { text-shadow: 0 0 30px rgba(241,196,15,0.8); }
+        }
+
+        .question-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        .question-modal.active { display: flex; }
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .question-box {
+            background: #1a1a2a;
+            border: 2px solid #f1c40f;
+            border-radius: 25px;
+            padding: 30px 25px;
+            max-width: 450px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+            animation: popIn 0.3s;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .question-box h2 {
+            color: #f1c40f;
+            font-size: 22px;
+            margin-bottom: 8px;
+            font-family: 'Comic Sans MS', cursive;
+            text-align: center;
+        }
+        .question-box .q-text {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 15px 0 10px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .question-box .q-hint {
+            font-size: 14px;
+            color: #8ab4d8;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        .question-box .q-attempts {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #e67e22;
+        }
+        .question-box .q-input-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .question-box .q-input-row input {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid #4a4a6a;
+            background: #12122a;
+            color: #fff;
+            font-size: 20px;
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+        }
+        .question-box .q-input-row input:focus { border-color: #f1c40f; }
+        .question-box .q-input-row button {
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: none;
+            background: #27ae60;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            touch-action: manipulation;
+        }
+        .question-box .q-input-row button:active { transform: scale(0.95); }
+        .question-box .q-input-row button:hover { background: #2ecc71; }
+        .question-box .q-result {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 12px;
+            min-height: 30px;
+        }
+        .question-box .q-result.correct { color: #2ecc71; }
+        .question-box .q-result.wrong { color: #e74c3c; }
+        .question-box .q-close-btn {
+            display: none;
+            margin: 12px auto 0;
+            padding: 10px 30px;
+            border-radius: 30px;
+            border: none;
+            background: #2980b9;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .question-box .q-close-btn:active { transform: scale(0.95); }
+
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-modal.active { display: flex; }
+        .qr-modal-content {
+            background: #1a1a2a;
+            padding: 25px 30px 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 400px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+            border: 1px solid #f1c40f;
+        }
+        .qr-modal-content h2 { color: #f1c40f; font-size: 22px; margin-bottom: 5px; }
+        .qr-modal-content .subtitle { color: #aaa; margin-bottom: 12px; font-size: 14px; }
+        #qrcode { display: inline-block; background: white; padding: 12px; border-radius: 10px; margin: 5px auto; border: 2px solid #333; }
+        .qr-url-box {
+            background: #111;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #888;
+            border: 1px solid #333;
+            text-align: left;
+            font-family: monospace;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+        .qr-url-label { font-size: 12px; color: #888; text-align: left; margin-bottom: 3px; }
+        .qr-input-group { display: flex; gap: 6px; margin: 8px 0; }
+        .qr-input-group input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 2px solid #333; background: #222; color: #fff; font-size: 12px; font-family: monospace; }
+        .qr-input-group input:focus { border-color: #f1c40f; outline: none; }
+        .qr-input-group button { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .qr-close-btn {
+            background: #c0392b;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .qr-close-btn:active { transform: scale(0.95); }
+        .qr-help { font-size: 12px; color: #999; margin-top: 6px; padding: 8px; background: #222; border-radius: 8px; border-left: 3px solid #f39c12; text-align: left; }
+
+        @media (max-width: 600px) {
+            .title { font-size: 22px; }
+            .btn { padding: 10px 16px; font-size: 20px; min-width: 60px; }
+            .question-box { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="header">
+        <div class="title">📚 Книжный лабиринт</div>
+        <button class="qr-btn" id="qrBtn">📱 QR</button>
+    </div>
+
+    <div class="stats">
+        <span class="item">📌 Уровень: <span class="value" id="levelDisplay">1/3</span></span>
+        <span class="item">📖 Собрано: <span class="value green" id="booksCollected">0/0</span></span>
+        <span class="item">❤️ Попытки: <span class="value" id="attemptsDisplay">3</span></span>
+    </div>
+
+    <div class="labyrinth-container">
+        <canvas id="labyrinthCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="upBtn">⬆</button>
+        <button class="btn" id="leftBtn">⬅</button>
+        <button class="btn" id="downBtn">⬇</button>
+        <button class="btn" id="rightBtn">➡</button>
+    </div>
+
+    <div class="message-area" id="messageArea">
+        <span id="messageText">Собери все книги, затем найди выход!</span>
+    </div>
+</div>
+
+<!-- Модальное окно вопроса -->
+<div class="question-modal" id="questionModal">
+    <div class="question-box">
+        <h2>📖 Вопрос о книге</h2>
+        <div class="q-text" id="qText">Вопрос загружается...</div>
+        <div class="q-hint" id="qHint">Нажмите «Намёк», чтобы увидеть подсказку</div>
+        <div class="q-attempts" id="qAttempts">Попыток: 3</div>
+        <div class="q-input-row">
+            <input type="text" id="qInput" placeholder="Введите ответ" maxlength="30">
+            <button id="qSubmitBtn">Ответить</button>
+        </div>
+        <div style="text-align:center; margin-top:10px;">
+            <button id="qHintBtn" style="background:#8e44ad; border:none; color:white; padding:8px 20px; border-radius:30px; font-size:16px; cursor:pointer; touch-action:manipulation;">💡 Намёк</button>
+        </div>
+        <div class="q-result" id="qResult"></div>
+        <button class="q-close-btn" id="qCloseBtn">Продолжить</button>
+    </div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qrModal">
+    <div class="qr-modal-content">
+        <h2>📱 QR-код</h2>
+        <p class="subtitle">Отсканируйте для перехода на игру</p>
+        <div id="qrcode"></div>
+        <div class="qr-url-label">🔗 Ссылка:</div>
+        <div class="qr-url-box" id="qrUrl">Загрузка...</div>
+        <div class="qr-input-group">
+            <input type="text" id="qrUrlInput" placeholder="Вставьте ссылку...">
+            <button id="qrUpdateBtn">Обновить</button>
+        </div>
+        <div class="qr-help">💡 Загрузите на хостинг и вставьте ссылку</div>
+        <button class="qr-close-btn" id="qrCloseBtn">✕ Закрыть</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    // =================== НАСТРОЙКИ ===================
+    const canvas = document.getElementById('labyrinthCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    const LEVELS = 3;
+    const BOOKS_PER_LEVEL = [4, 5, 6]; // больше книг на каждом уровне
+    // Размеры лабиринта: уровень 1 — 13x13, уровень 2 — 15x15, уровень 3 — 17x17
+    const MAZE_SIZES = [13, 15, 17];
+
+    let currentLevel = 0;
+    let attempts = 3;
+    let maxAttempts = 3;
+    let collected = 0;
+    let totalBooks = 0;
+    let player = { x: 1, y: 1 };
+    let books = [];
+    let finish = { x: 0, y: 0 };
+    let maze = [];
+    let mazeSize = 0;
+    let cellSize = 0;
+    let levelComplete = false;
+
+    // =================== ВСЕ ВОПРОСЫ (18 штук, уникальные) ===================
+    const ALL_QUESTIONS = [
+        {
+            question: 'В каком городе живёт Родион Раскольников?',
+            answerVariants: ['петербург', 'санкт-петербург', 'питер', 'спб', 'санкт петербург'],
+            hint: 'Город, который связан с белыми ночами и разводными мостами',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a.includes(v) || v.includes(a));
+            }
+        },
+        {
+            question: 'Сколько кругов ада в «Божественной комедии»?',
+            answerVariants: ['9', 'девять'],
+            hint: 'Это число равно количеству муз или планет в астрологии',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Кто написал «Евгений Онегин»?',
+            answerVariants: ['пушкин'],
+            hint: 'Его имя носит одна из главных улиц Москвы',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Какой поэтический размер используется в классическом русском стихосложении чаще всего?',
+            answerVariants: ['ямб'],
+            hint: 'Вспомните строчку «Мой дядя самых честных правил» – какой размер?',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько томов в романе «Война и мир»?',
+            answerVariants: ['4', 'четыре'],
+            hint: 'Это число соответствует количеству времён года',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'В какой стране родился Уильям Шекспир?',
+            answerVariants: ['англия'],
+            hint: 'Это страна, где говорят на языке, который стал мировым',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Какой приём основан на противопоставлении?',
+            answerVariants: ['антитеза'],
+            hint: 'Это слово происходит от греческого «противопоставление»',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько братьев было у главной героини сказки «Крошечка-Хаврошечка»?',
+            answerVariants: ['3', 'три'],
+            hint: 'Это число часто встречается в русских сказках как магическое',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'В каком веке жил А.С. Пушкин?',
+            answerVariants: ['19', 'девятнадцать'],
+            hint: 'Это век, когда в России появился первый роман в стихах',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько сыновей было у царя Салтана в сказке Пушкина?',
+            answerVariants: ['1', 'один'],
+            hint: 'В сказке говорится о единственном наследнике',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'В каком городе родился А.С. Пушкин?',
+            answerVariants: ['москва'],
+            hint: 'Этот город называют «сердцем России»',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Какой жанр рассказывает о героическом прошлом народа?',
+            answerVariants: ['былина'],
+            hint: 'Этот жанр часто исполнялся под гусли',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько строк в сонете?',
+            answerVariants: ['14', 'четырнадцать'],
+            hint: 'Это число равно количеству строк в двух катренах и двух терцетах',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько глав в романе «Евгений Онегин»? (в стихах)',
+            answerVariants: ['8', 'восемь'],
+            hint: 'Это число на единицу больше, чем количество частей в «Войне и мире»',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Как звали няню Пушкина?',
+            answerVariants: ['арина'],
+            hint: 'Её имя совпадает с именем героини в «Сказке о царе Салтане»',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Какое имя было у кота в «Мастере и Маргарите»?',
+            answerVariants: ['бегемот'],
+            hint: 'Это имя совпадает с названием крупного животного, обитающего в Африке',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'В каком городе происходит действие «Трёх мушкетёров»?',
+            answerVariants: ['париж'],
+            hint: 'Этот город называют «городом света»',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        },
+        {
+            question: 'Сколько богатырей в «Слове о полку Игореве»?',
+            answerVariants: ['3', 'три'],
+            hint: 'Это число равно количеству русских князей, участвовавших в походе',
+            check: function(ans) {
+                const a = ans.toLowerCase().trim();
+                return this.answerVariants.some(v => a === v);
+            }
+        }
+    ];
+
+    let usedQuestionsIndices = [];
+
+    // =================== ГЕНЕРАЦИЯ ЛАБИРИНТА (без добавления лишних стен) ===================
+    function generateMaze(size) {
+        const s = size % 2 === 0 ? size + 1 : size;
+        maze = [];
+        for (let r = 0; r < s; r++) {
+            maze[r] = [];
+            for (let c = 0; c < s; c++) {
+                maze[r][c] = 0;
+            }
+        }
+        const startX = 1, startY = 1;
+        maze[startY][startX] = 1;
+        const stack = [{ x: startX, y: startY }];
+        const dirs = [
+            { dx: 0, dy: -2 },
+            { dx: 0, dy: 2 },
+            { dx: -2, dy: 0 },
+            { dx: 2, dy: 0 }
+        ];
+        while (stack.length > 0) {
+            const cur = stack[stack.length - 1];
+            const neighbors = [];
+            for (let d of dirs) {
+                const nx = cur.x + d.dx;
+                const ny = cur.y + d.dy;
+                if (nx > 0 && nx < s-1 && ny > 0 && ny < s-1 && maze[ny][nx] === 0) {
+                    neighbors.push({ x: nx, y: ny, dx: d.dx, dy: d.dy });
+                }
+            }
+            if (neighbors.length > 0) {
+                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                maze[cur.y + next.dy/2][cur.x + next.dx/2] = 1;
+                maze[next.y][next.x] = 1;
+                stack.push({ x: next.x, y: next.y });
+            } else {
+                stack.pop();
+            }
+        }
+        // Больше не добавляем случайных стен — лабиринт остаётся связным
+        mazeSize = s;
+        cellSize = W / s;
+        // Выбираем финиш (далеко от старта)
+        let candidates = [];
+        for (let r = 1; r < mazeSize-1; r++) {
+            for (let c = 1; c < mazeSize-1; c++) {
+                if (maze[r][c] === 1 && !(r === 1 && c === 1)) {
+                    candidates.push({ x: c, y: r });
+                }
+            }
+        }
+        candidates.sort(() => Math.random() - 0.5);
+        // Берем клетку, достаточно удалённую от старта (сумма координат > 4)
+        let farCandidates = candidates.filter(p => p.x + p.y > 6);
+        if (farCandidates.length === 0) farCandidates = candidates;
+        finish = farCandidates[0] || candidates[0] || { x: mazeSize-2, y: mazeSize-2 };
+    }
+
+    // =================== РАЗМЕЩЕНИЕ КНИГ ===================
+    function placeBooks(count) {
+        books = [];
+        const positions = [];
+        for (let r = 1; r < mazeSize-1; r++) {
+            for (let c = 1; c < mazeSize-1; c++) {
+                if (maze[r][c] === 1) {
+                    positions.push({ x: c, y: r });
+                }
+            }
+        }
+        const startIdx = positions.findIndex(p => p.x === 1 && p.y === 1);
+        if (startIdx !== -1) positions.splice(startIdx, 1);
+        const finishIdx = positions.findIndex(p => p.x === finish.x && p.y === finish.y);
+        if (finishIdx !== -1) positions.splice(finishIdx, 1);
+        positions.sort(() => Math.random() - 0.5);
+        const selected = positions.slice(0, Math.min(count, positions.length));
+
+        // Выбираем уникальные вопросы
+        const available = ALL_QUESTIONS.map((q, idx) => ({ q, idx }))
+            .filter(item => !usedQuestionsIndices.includes(item.idx));
+        available.sort(() => Math.random() - 0.5);
+        const chosen = available.slice(0, count);
+        chosen.forEach(item => {
+            usedQuestionsIndices.push(item.idx);
+        });
+
+        selected.forEach((pos, idx) => {
+            const questionData = chosen[idx % chosen.length];
+            books.push({
+                x: pos.x,
+                y: pos.y,
+                answered: false,
+                question: questionData ? questionData.q : ALL_QUESTIONS[0]
+            });
+        });
+        totalBooks = books.length;
+        collected = 0;
+        levelComplete = false;
+        document.getElementById('booksCollected').textContent = collected + '/' + totalBooks;
+    }
+
+    // =================== ОТРИСОВКА ===================
+    function drawMaze() {
+        ctx.clearRect(0, 0, W, H);
+        for (let r = 0; r < mazeSize; r++) {
+            for (let c = 0; c < mazeSize; c++) {
+                const x = c * cellSize;
+                const y = r * cellSize;
+                if (maze[r][c] === 0) {
+                    ctx.fillStyle = '#d4a373';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 6;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#b08968';
+                    ctx.fillRect(x, y, cellSize, 2);
+                    ctx.fillRect(x, y, 2, cellSize);
+                } else {
+                    ctx.fillStyle = '#2a2a2a';
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.fillStyle = '#3a3a3a';
+                    for (let i = 0; i < cellSize; i += 6) {
+                        for (let j = 0; j < cellSize; j += 6) {
+                            if ((i+j) % 12 === 0) {
+                                ctx.fillRect(x+i, y+j, 2, 2);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Финиш
+        const fx = finish.x * cellSize + cellSize/2;
+        const fy = finish.y * cellSize + cellSize/2;
+        ctx.shadowColor = '#2ecc71';
+        ctx.shadowBlur = 25;
+        ctx.font = `${cellSize * 0.6}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText('🚪', fx, fy);
+        ctx.shadowBlur = 0;
+
+        // Книги
+        books.forEach(book => {
+            if (!book.answered) {
+                const x = book.x * cellSize + cellSize/2;
+                const y = book.y * cellSize + cellSize/2;
+                ctx.shadowColor = '#f1c40f';
+                ctx.shadowBlur = 25;
+                ctx.font = `${cellSize * 0.6}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillText('📖', x, y);
+                ctx.shadowBlur = 0;
+            }
+        });
+
+        // Игрок
+        const px = player.x * cellSize + cellSize/2;
+        const py = player.y * cellSize + cellSize/2;
+        ctx.shadowColor = '#3498db';
+        ctx.shadowBlur = 25;
+        ctx.font = `${cellSize * 0.7}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#3498db';
+        ctx.fillText('📕', px, py);
+        ctx.shadowBlur = 0;
+    }
+
+    // =================== ДВИЖЕНИЕ ===================
+    function movePlayer(dx, dy) {
+        const newX = player.x + dx;
+        const newY = player.y + dy;
+        if (newX < 0 || newX >= mazeSize || newY < 0 || newY >= mazeSize) return;
+        if (maze[newY][newX] === 0) return;
+        player.x = newX;
+        player.y = newY;
+        drawMaze();
+
+        const book = books.find(b => b.x === player.x && b.y === player.y && !b.answered);
+        if (book) {
+            showQuestion(book);
+            return;
+        }
+
+        if (collected === totalBooks && totalBooks > 0 && player.x === finish.x && player.y === finish.y) {
+            levelComplete = true;
+            setTimeout(() => {
+                nextLevel();
+            }, 300);
+        } else if (collected === totalBooks && totalBooks > 0) {
+            document.getElementById('messageText').textContent = '📚 Все книги собраны! Иди к выходу! 🚪';
+        } else {
+            document.getElementById('messageText').textContent = 'Собери все книги, затем найди выход!';
+        }
+    }
+
+    // =================== ВОПРОСЫ ===================
+    let currentBook = null;
+    let questionAttempts = 3;
+    let isQuestionActive = false;
+    let hintRevealed = false;
+
+    function showQuestion(book) {
+        if (isQuestionActive) return;
+        isQuestionActive = true;
+        currentBook = book;
+        questionAttempts = 3;
+        hintRevealed = false;
+        const q = book.question;
+        document.getElementById('qText').textContent = q.question;
+        document.getElementById('qHint').textContent = '💡 Нажмите кнопку "Намёк", чтобы увидеть подсказку';
+        document.getElementById('qAttempts').textContent = 'Попыток: ' + questionAttempts;
+        document.getElementById('qResult').textContent = '';
+        document.getElementById('qResult').className = 'q-result';
+        document.getElementById('qInput').value = '';
+        document.getElementById('qInput').disabled = false;
+        document.getElementById('qSubmitBtn').disabled = false;
+        document.getElementById('qCloseBtn').style.display = 'none';
+        document.getElementById('qHintBtn').style.display = 'inline-block';
+        document.getElementById('questionModal').classList.add('active');
+        document.getElementById('qInput').focus();
+    }
+
+    function showHint() {
+        if (!currentBook) return;
+        if (hintRevealed) return;
+        const q = currentBook.question;
+        document.getElementById('qHint').textContent = '💡 ' + (q.hint || 'Нет подсказки');
+        hintRevealed = true;
+        document.getElementById('qHintBtn').style.display = 'none';
+    }
+
+    function submitAnswer() {
+        if (!currentBook) return;
+        const input = document.getElementById('qInput');
+        const answer = input.value.trim();
+        if (!answer) return;
+
+        const q = currentBook.question;
+        const resultDiv = document.getElementById('qResult');
+
+        let isCorrect = false;
+        if (q.check) {
+            isCorrect = q.check(answer);
+        } else {
+            // fallback
+            isCorrect = answer.toLowerCase().trim() === q.answer.toLowerCase();
+        }
+
+        if (isCorrect) {
+            resultDiv.textContent = '✅ Правильно! Книга собрана!';
+            resultDiv.className = 'q-result correct';
+            currentBook.answered = true;
+            collected++;
+            document.getElementById('booksCollected').textContent = collected + '/' + totalBooks;
+            document.getElementById('qInput').disabled = true;
+            document.getElementById('qSubmitBtn').disabled = true;
+            document.getElementById('qCloseBtn').style.display = 'block';
+            document.getElementById('qHintBtn').style.display = 'none';
+            if (collected === totalBooks) {
+                document.getElementById('messageText').textContent = '📚 Все книги собраны! Иди к выходу! 🚪';
+                setTimeout(() => {
+                    document.getElementById('qCloseBtn').click();
+                }, 600);
+            } else {
+                document.getElementById('qCloseBtn').click();
+            }
+        } else {
+            questionAttempts--;
+            document.getElementById('qAttempts').textContent = 'Попыток: ' + questionAttempts;
+            if (questionAttempts <= 0) {
+                resultDiv.textContent = '❌ Неправильно! Книга потеряна.';
+                resultDiv.className = 'q-result wrong';
+                const idx = books.indexOf(currentBook);
+                if (idx !== -1) books.splice(idx, 1);
+                totalBooks = books.length;
+                document.getElementById('booksCollected').textContent = collected + '/' + totalBooks;
+                attempts--;
+                document.getElementById('attemptsDisplay').textContent = attempts;
+                if (attempts <= 0) {
+                    resultDiv.textContent = '💔 Попытки уровня закончились! Уровень перезапускается.';
+                    setTimeout(() => {
+                        document.getElementById('qCloseBtn').click();
+                        resetLevel();
+                    }, 1500);
+                } else {
+                    document.getElementById('qCloseBtn').style.display = 'block';
+                }
+                document.getElementById('qInput').disabled = true;
+                document.getElementById('qSubmitBtn').disabled = true;
+                document.getElementById('qHintBtn').style.display = 'none';
+            } else {
+                resultDiv.textContent = '❌ Неправильно! Попробуйте ещё раз.';
+                resultDiv.className = 'q-result wrong';
+                document.getElementById('qInput').value = '';
+                document.getElementById('qInput').focus();
+            }
+        }
+    }
+
+    function closeQuestion() {
+        document.getElementById('questionModal').classList.remove('active');
+        isQuestionActive = false;
+        currentBook = null;
+        drawMaze();
+    }
+
+    // =================== УРОВНИ ===================
+    function nextLevel() {
+        currentLevel++;
+        if (currentLevel >= LEVELS) {
+            document.getElementById('messageArea').innerHTML = '<span class="win-text">📚 Старая дорога</span>';
+            document.getElementById('messageText').textContent = '';
+            document.querySelectorAll('.controls .btn').forEach(b => b.disabled = true);
+            return;
+        }
+        resetLevel();
+    }
+
+    function resetLevel() {
+        const size = MAZE_SIZES[currentLevel];
+        generateMaze(size);
+        player.x = 1;
+        player.y = 1;
+        const bookCount = BOOKS_PER_LEVEL[currentLevel];
+        placeBooks(bookCount);
+        attempts = maxAttempts;
+        document.getElementById('attemptsDisplay').textContent = attempts;
+        document.getElementById('levelDisplay').textContent = (currentLevel+1) + '/' + LEVELS;
+        document.getElementById('messageText').textContent = 'Собери все книги, затем найди выход!';
+        levelComplete = false;
+        drawMaze();
+    }
+
+    // =================== УПРАВЛЕНИЕ ===================
+    document.getElementById('upBtn').addEventListener('click', () => movePlayer(0, -1));
+    document.getElementById('downBtn').addEventListener('click', () => movePlayer(0, 1));
+    document.getElementById('leftBtn').addEventListener('click', () => movePlayer(-1, 0));
+    document.getElementById('rightBtn').addEventListener('click', () => movePlayer(1, 0));
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        const key = e.key;
+        e.preventDefault();
+        if (key === 'ArrowUp') movePlayer(0, -1);
+        else if (key === 'ArrowDown') movePlayer(0, 1);
+        else if (key === 'ArrowLeft') movePlayer(-1, 0);
+        else if (key === 'ArrowRight') movePlayer(1, 0);
+    });
+
+    let touchStartX = 0, touchStartY = 0;
+    canvas.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!touchStartX || !touchStartY) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        if (absX < 20 && absY < 20) return;
+        if (absX > absY) {
+            if (dx > 0) movePlayer(1, 0);
+            else movePlayer(-1, 0);
+        } else {
+            if (dy > 0) movePlayer(0, 1);
+            else movePlayer(0, -1);
+        }
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+        touchStartX = 0;
+        touchStartY = 0;
+    }, { passive: true });
+
+    document.getElementById('qSubmitBtn').addEventListener('click', submitAnswer);
+    document.getElementById('qInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') submitAnswer();
+    });
+    document.getElementById('qCloseBtn').addEventListener('click', closeQuestion);
+    document.getElementById('qHintBtn').addEventListener('click', showHint);
+
+    // =================== QR ===================
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrCloseBtn = document.getElementById('qrCloseBtn');
+    const qrUrl = document.getElementById('qrUrl');
+    const qrUrlInput = document.getElementById('qrUrlInput');
+    const qrUpdateBtn = document.getElementById('qrUpdateBtn');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    function generateQR(text) {
+        qrcodeContainer.innerHTML = '';
+        if (text && text.trim() !== '') {
+            try {
+                new QRCode(qrcodeContainer, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        return false;
+    }
+
+    function getCurrentUrl() {
+        let url = window.location.href;
+        if (url.startsWith('file://')) return '';
+        return url;
+    }
+
+    qrBtn.addEventListener('click', function() {
+        qrModal.classList.add('active');
+        let currentUrl = getCurrentUrl();
+        if (currentUrl) {
+            qrUrl.textContent = currentUrl;
+            qrUrlInput.value = currentUrl;
+            generateQR(currentUrl);
+        } else {
+            qrUrl.textContent = '⚠️ Загрузите на хостинг!';
+            qrUrlInput.value = '';
+            qrcodeContainer.innerHTML = '<div style="padding:20px;color:#999;">Введите ссылку</div>';
+        }
+    });
+
+    qrCloseBtn.addEventListener('click', function() { qrModal.classList.remove('active'); });
+    qrModal.addEventListener('click', function(e) { if (e.target === qrModal) qrModal.classList.remove('active'); });
+    qrUpdateBtn.addEventListener('click', function() {
+        let url = qrUrlInput.value.trim();
+        if (url) {
+            qrUrl.textContent = url;
+            if (!generateQR(url)) alert('Не удалось создать QR-код');
+        } else {
+            alert('Введите ссылку');
+        }
+    });
+    qrUrlInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') qrUpdateBtn.click(); });
+
+    // =================== СТАРТ ===================
+    function startGame() {
+        currentLevel = 0;
+        attempts = maxAttempts;
+        usedQuestionsIndices = [];
+        document.getElementById('attemptsDisplay').textContent = attempts;
+        document.getElementById('levelDisplay').textContent = '1/' + LEVELS;
+        resetLevel();
+        document.querySelectorAll('.controls .btn').forEach(b => b.disabled = false);
+        document.getElementById('messageArea').innerHTML = '<span id="messageText">Собери все книги, затем найди выход!</span>';
+    }
+
+    startGame();
+})();
+</script>
+</body>
+</html>
